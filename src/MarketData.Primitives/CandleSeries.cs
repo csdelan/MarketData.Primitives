@@ -44,7 +44,7 @@ namespace MarketData.Primitives.Models
 
         public virtual void AppendCandle(Candle candle, bool notify = true)
         {
-            if (candle.Resolution.Equals(Resolution.Empty))
+            if (candle.Resolution.IsEmpty)
                 throw new ArgumentException("Candle resolution cannot be empty.");
             if (_candles.Any() && !candle.Resolution.Equals(Resolution))
                 throw new ArgumentException("Candle resolution must match series resolution.");
@@ -79,16 +79,6 @@ namespace MarketData.Primitives.Models
                 throw new InvalidOperationException("Cannot consolidate an empty series.");
             var newResolution = new Resolution((uint)_candles.Count * Resolution.Count, Resolution.Unit);
             return new Candle(Open, High, Low, Close, Volume, newResolution, _candles[0].Timestamp);
-        }
-
-        /// <summary>
-        /// Consolidate candles to a new resolution.
-        /// </summary>
-        /// <param name="resolution"></param>
-        /// <returns></returns>
-        public Candle Consolidate(Resolution resolution)
-        {
-            throw new NotImplementedException();
         }
 
         public Resolution Resolution => _candles.Any() ? _candles[0].Resolution : throw new InvalidOperationException("Series is empty.");

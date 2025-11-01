@@ -27,13 +27,21 @@ namespace MarketData.Primitives.Tests
  }
 
  [Fact]
- public void GetLastEvent_CurrentImplementation_ReturnsNow()
+ public void GetLastEvent_FloorsToBoundary_ForMinutes()
  {
- var anchor = new DateTimeOffset(2040,12,31,23,45,0, TimeSpan.Zero);
- TimeKeeperProvider.SetSimulatedTimeKeeper(anchor);
+ var t = new DateTimeOffset(2025,5,17,11,34,45, TimeSpan.Zero); //11:34:45
  var res = new Resolution(5, ResolutionUnit.Minutes);
- var last = res.GetLastEvent(anchor.AddHours(1));
- Assert.Equal(anchor, last);
+ var last = res.GetLastEvent(t);
+ Assert.Equal(new DateTimeOffset(2025,5,17,11,30,0, TimeSpan.Zero), last);
+ }
+
+ [Fact]
+ public void GetLastEvent_FloorsToBoundary_ForQuarters()
+ {
+ var t = new DateTimeOffset(2025,5,17,0,0,0, TimeSpan.Zero); // May17,2025
+ var res = new Resolution(1, ResolutionUnit.Quarters);
+ var last = res.GetLastEvent(t);
+ Assert.Equal(new DateTimeOffset(2025,4,1,0,0,0, TimeSpan.Zero), last);
  }
  }
 }

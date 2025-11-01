@@ -31,6 +31,11 @@ namespace MarketData.Primitives
         public static readonly Resolution Empty = new Resolution(0, ResolutionUnit.Minutes);
 
         /// <summary>
+        /// True when this resolution has no duration (Count == 0).
+        /// </summary>
+        public bool IsEmpty => Count == 0;
+
+        /// <summary>
         /// Intraday refers to less than 1 day proper
         /// </summary>
         public bool IsIntraday
@@ -106,13 +111,46 @@ namespace MarketData.Primitives
         }
 
         /// <summary>
-        /// Get last fired time event for the given resolution
+        /// Get last fired time event for the given resolution (floors to the most recent boundary at or before the given time).
         /// </summary>
         /// <param name="time">current time reference</param>
-        /// <returns>Get last fired time event for the given resolution</returns>
+        /// <returns>The last boundary time at or before the given time</returns>
         public DateTimeOffset GetLastEvent(DateTimeOffset time)
         {
-            return TimeKeeperProvider.Now;
+            if (Count == 0)
+                throw new InvalidOperationException("Cannot calculate last event for zero-count resolution.");
+
+            long ticksPerUnit = Unit switch
+            {
+                ResolutionUnit.Seconds => TimeSpan.TicksPerSecond,
+                ResolutionUnit.Minutes => TimeSpan.TicksPerMinute,
+                ResolutionUnit.Hours => TimeSpan.TicksPerHour,
+                ResolutionUnit.Days => TimeSpan.TicksPerDay,
+                ResolutionUnit.Weeks => TimeSpan.TicksPerDay * 7,
+                _ => 0
+            };
+
+            if (ticksPerUnit > 0)
+            {
+                long blockTicks = (long)Count * ticksPerUnit;
+                long ticks = time.Ticks - (time.Ticks % blockTicks);
+                return new DateTimeOffset(ticks, time.Offset);
+            }
+
+            // Variable-length units handled via month indexing
+            int monthsPerBlock = Unit switch
+            {
+                ResolutionUnit.Months => (int)Count,
+                ResolutionUnit.Quarters => checked((int)Count * 3),
+                ResolutionUnit.Years => checked((int)Count * 12),
+                _ => throw new InvalidOperationException("Invalid resolution unit.")
+            };
+
+            int monthIndex = checked(time.Year * 12 + (time.Month - 1));
+            int startIndex = monthIndex - (monthIndex % monthsPerBlock);
+            int startYear = startIndex / 12;
+            int startMonth = (startIndex % 12) + 1;
+            return new DateTimeOffset(startYear, startMonth, 1, 0, 0, 0, time.Offset);
         }
 
         /// <summary>
@@ -137,7 +175,7 @@ namespace MarketData.Primitives
 
             if (ticksPerUnit > 0)
             {
-                long ticks = time.Ticks - (time.Ticks % (Count * ticksPerUnit)) + Count * ticksPerUnit;
+                long ticks = time.Ticks - (time.Ticks % ((long)Count * ticksPerUnit)) + (long)Count * ticksPerUnit;
                 return new DateTimeOffset(ticks, time.Offset);
             }
 
@@ -219,6 +257,7 @@ namespace MarketData.Primitives
             ThirtyMinutes = 30,
             OneHour = 60,
             TwoHours = 120,
+            FourHours = 240,
             OneDay = 1440, // 24 hours
             TwoDays = 2880, // 48 hours
             OneWeek = 10080, // 7 days
@@ -227,7 +266,7 @@ namespace MarketData.Primitives
             OneQuarter = 129600, // Approx. 90 days
         }
 
-        public Dictionary<StandardResolution, Resolution> GetStandardResolutionsX()
+        public readonly Dictionary<StandardResolution, Resolution> GetStandardResolutions()
         {
             return new Dictionary<StandardResolution, Resolution>
             {
@@ -249,7 +288,7 @@ namespace MarketData.Primitives
 
         public Resolution GetResolution(StandardResolution res)
         {
-            var resolutions = GetStandardResolutionsX();
+            var resolutions = GetStandardResolutions();
             if (resolutions.TryGetValue(res, out var resolution))
             {
                 return resolution;

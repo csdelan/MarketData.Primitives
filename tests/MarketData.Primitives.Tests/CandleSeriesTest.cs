@@ -88,6 +88,19 @@ namespace MarketData.Primitives.Tests
         }
 
         [Fact]
+        public void AppendCandle_DefaultZeroCountResolution_IsRejected()
+        {
+            // Arrange
+            var series = new CandleSeries();
+            var zeroCountResolution = new Resolution(0, ResolutionUnit.Seconds);
+            var candle = new Candle(100m, zeroCountResolution, _baseTimestamp);
+
+            // Act & Assert
+            var exception = Assert.Throws<ArgumentException>(() => series.AppendCandle(candle));
+            Assert.Equal("Candle resolution cannot be empty.", exception.Message);
+        }
+
+        [Fact]
         public void AppendCandle_MismatchedResolution_ThrowsArgumentException()
         {
             // Arrange
