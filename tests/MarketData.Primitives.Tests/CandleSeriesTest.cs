@@ -252,11 +252,11 @@ namespace MarketData.Primitives.Tests
             // Arrange
             var series = new CandleSeries();
             var candles = new List<Candle>
-    {
-        CreateCandle(100m, 110m, 90m, 105m, 1000UL, _baseTimestamp),
-        CreateCandle(105m, 115m, 95m, 110m, 1200UL, _baseTimestamp.AddMinutes(1)),
-        CreateCandle(110m, 120m, 100m, 115m, 1500UL, _baseTimestamp.AddMinutes(2))
-    };
+            {
+                CreateCandle(100m, 110m, 90m, 105m, 1000UL, _baseTimestamp),
+                CreateCandle(105m, 115m, 95m, 110m, 1200UL, _baseTimestamp.AddMinutes(1)),
+                CreateCandle(110m, 120m, 100m, 115m, 1500UL, _baseTimestamp.AddMinutes(2))
+            };
             series.AppendCandles(candles);
 
             // Act
@@ -308,6 +308,23 @@ namespace MarketData.Primitives.Tests
 
             // Assert
             Assert.Equal(candles, enumerated);
+        }
+
+        [Fact]
+        public void AppendCandle_NoNotify_DoesNotRaisePropertyChanged()
+        {
+            // Arrange
+            var series = new CandleSeries();
+            var candle = CreateCandle(100m, 110m, 90m, 105m, 1000UL, _baseTimestamp);
+            bool propertyChangedFired = false;
+            series.PropertyChanged += (s, e) => { if (e.PropertyName == nameof(series.Candles)) propertyChangedFired = true; };
+
+            // Act
+            series.AppendCandle(candle, notify: false);
+
+            // Assert
+            Assert.Single(series.Candles);
+            Assert.False(propertyChangedFired);
         }
     }
 }

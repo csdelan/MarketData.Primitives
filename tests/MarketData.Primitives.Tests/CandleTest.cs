@@ -130,6 +130,20 @@
         }
 
         [Fact]
+        public void EndTime_WithEmptyResolution_ReturnsTimestamp()
+        {
+            // Arrange
+            var timestamp = new DateTimeOffset(2025, 5, 16, 11, 0, 0, TimeSpan.Zero);
+            var candle = new Candle(100m, Resolution.Empty, timestamp);
+
+            // Act
+            var end = candle.EndTime;
+
+            // Assert
+            Assert.Equal(timestamp, end);
+        }
+
+        [Fact]
         public void IsBullish_CloseGreaterThanOpen_ReturnsTrue()
         {
             // Arrange

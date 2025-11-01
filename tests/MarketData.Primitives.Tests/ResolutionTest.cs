@@ -115,5 +115,19 @@ namespace MarketData.Primitives.Tests
             var duration = resolution.GetDurationToNextResolutionEvent(start);
             Assert.Equal(TimeSpan.FromMinutes(1), duration);
         }
+
+        [Fact]
+        public void GetNextEvent_ZeroCount_Throws()
+        {
+            var resolution = new Resolution(0, ResolutionUnit.Minutes);
+            Assert.Throws<InvalidOperationException>(() => resolution.GetNextEvent(DateTimeOffset.UtcNow));
+        }
+
+        [Fact]
+        public void ToString_DelegatesToShorthand()
+        {
+            var res = new Resolution(3, ResolutionUnit.Years);
+            Assert.Equal("3Y", res.ToString());
+        }
     }
 }
