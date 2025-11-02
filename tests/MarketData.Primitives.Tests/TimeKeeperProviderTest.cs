@@ -1,3 +1,7 @@
+using System;
+using System.Threading.Tasks;
+using Xunit;
+
 namespace MarketData.Primitives.Tests
 {
     [Collection("TimeKeeper")]
@@ -9,7 +13,7 @@ namespace MarketData.Primitives.Tests
             TimeKeeperProvider.SetRealTimeKeeper();
             var t1 = TimeKeeperProvider.Now;
             // small delay
-            Thread.Sleep(5);
+            System.Threading.Thread.Sleep(5);
             var t2 = TimeKeeperProvider.Now;
             Assert.True(t2 >= t1);
         }
