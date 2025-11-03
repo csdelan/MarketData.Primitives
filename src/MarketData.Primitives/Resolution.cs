@@ -229,7 +229,6 @@ namespace MarketData.Primitives
             return GetNextEvent(TimeKeeperProvider.Now);
         }
 
-
         public override string ToString() => ToShorthand();
 
         public string ToShorthand()
