@@ -297,5 +297,74 @@ namespace MarketData.Primitives
                 throw new ArgumentException($"Invalid standard resolution: {res}", nameof(StandardResolution));
             }
         }
+
+        // Insert the following static parsing methods into the existing Resolution struct (place them anywhere inside the struct body):
+        public static Resolution Parse(string input)
+        {
+            // Accept forms like:1m,5m,1h,1d,1w,1M,1Q,1Y
+            var m = System.Text.RegularExpressions.Regex.Match(input ?? string.Empty, "^(?<n>\\d+)\\s*(?<u>[smhdwMQY])$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!m.Success)
+                throw new FormatException("Expected format like '1m', '5m', '1h', '1d', '1w', '1M', '1Q', or '1Y'.");
+
+            var n = uint.Parse(m.Groups["n"].Value, System.Globalization.CultureInfo.InvariantCulture);
+            var u = m.Groups["u"].Value;
+
+            ResolutionUnit unit = u.ToLowerInvariant() switch
+            {
+                "s" => ResolutionUnit.Seconds,
+                "m" => ResolutionUnit.Minutes,
+                "h" => ResolutionUnit.Hours,
+                "d" => ResolutionUnit.Days,
+                "w" => ResolutionUnit.Weeks,
+                _ => MapUpperUnits(u)
+            };
+
+            return new Resolution(n, unit);
+
+            static ResolutionUnit MapUpperUnits(string u) => u switch
+            {
+                "M" => ResolutionUnit.Months,
+                "Q" => ResolutionUnit.Quarters,
+                "Y" => ResolutionUnit.Years,
+                _ => throw new FormatException($"Unknown unit '{u}'.")
+            };
+        }
+
+        public static bool TryParse(string input, out Resolution resolution)
+        {
+            resolution = Empty;
+            if (string.IsNullOrWhiteSpace(input))
+                return false;
+
+            var m = System.Text.RegularExpressions.Regex.Match(input.Trim(), "^(?<n>\\d+)\\s*(?<u>[smhdwMQY])$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!m.Success)
+                return false;
+
+            if (!uint.TryParse(m.Groups["n"].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n))
+                return false;
+
+            var u = m.Groups["u"].Value;
+            ResolutionUnit unit;
+            switch (u.ToLowerInvariant())
+            {
+                case "s": unit = ResolutionUnit.Seconds; break;
+                case "m": unit = ResolutionUnit.Minutes; break;
+                case "h": unit = ResolutionUnit.Hours; break;
+                case "d": unit = ResolutionUnit.Days; break;
+                case "w": unit = ResolutionUnit.Weeks; break;
+                default:
+                    {
+                        var upper = u.ToUpperInvariant();
+                        if (upper == "M") unit = ResolutionUnit.Months;
+                        else if (upper == "Q") unit = ResolutionUnit.Quarters;
+                        else if (upper == "Y") unit = ResolutionUnit.Years;
+                        else return false;
+                        break;
+                    }
+            }
+
+            resolution = new Resolution(n, unit);
+            return true;
+        }
     }
 }
