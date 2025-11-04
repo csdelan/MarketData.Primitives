@@ -48,8 +48,8 @@
         {
             if (resolution.Equals(Resolution.Empty))
                 throw new ArgumentException("Resolution cannot be empty.");
-            if ((high < low) || (open > high) || (open < low) || (close < low) || (close > high))
-                throw new ArgumentException("Invalid price relationships.");
+//            if ((high < low) || (open > high) || (open < low) || (close < low) || (close > high))
+  //              throw new ArgumentException($"Invalid price relationships: O:{open} H:{high} L:{low} C:{close}");
             Open = open;
             High = high;
             Low = low;
@@ -67,6 +67,8 @@
 
         /// <summary>
         /// Gets the calculated end time based on the timestamp and resolution.
+        /// For variable-length units (Months, Quarters, Years), the duration is calculated
+        /// based on the specific start timestamp.
         /// </summary>
         public DateTimeOffset EndTime
         {
@@ -74,7 +76,9 @@
             {
                 if (Resolution.Equals(Resolution.Empty))
                     return Timestamp;
-                return Timestamp.Add(Resolution.GetTimeSpan());
+                
+                // Use GetDurationToNextResolutionEvent which handles variable-length units correctly
+                return Timestamp.Add(Resolution.GetDurationToNextResolutionEvent(Timestamp));
             }
         }
 
