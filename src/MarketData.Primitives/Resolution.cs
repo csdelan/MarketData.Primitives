@@ -51,24 +51,6 @@ namespace MarketData.Primitives
             }
         }
 
-        public TimeSpan GetDuration()
-        {
-            if (Count == 0)
-                return TimeSpan.Zero;
-            return Unit switch
-            {
-                ResolutionUnit.Seconds => TimeSpan.FromSeconds(Count),
-                ResolutionUnit.Minutes => TimeSpan.FromMinutes(Count),
-                ResolutionUnit.Hours => TimeSpan.FromHours(Count),
-                ResolutionUnit.Days => TimeSpan.FromDays(Count),
-                ResolutionUnit.Weeks => TimeSpan.FromDays(Count * 7),
-                ResolutionUnit.Months => throw new InvalidOperationException("Cannot represent variable-length units (Months) as a fixed TimeSpan."),
-                ResolutionUnit.Quarters => throw new InvalidOperationException("Cannot represent variable-length units (Quarters) as a fixed TimeSpan."),
-                ResolutionUnit.Years => throw new InvalidOperationException("Cannot represent variable-length units (Years) as a fixed TimeSpan."),
-                _ => throw new InvalidOperationException("Invalid resolution unit.")
-            };
-        }
-
         /// <summary>
         /// Calculates the exact duration of the next resolution event starting from the specified time.
         /// For variable-length units (months, quarters, years), the duration depends on the start time.
@@ -240,9 +222,9 @@ namespace MarketData.Primitives
                 case ResolutionUnit.Hours: return $"{Count}h";
                 case ResolutionUnit.Days: return $"{Count}d";
                 case ResolutionUnit.Weeks: return $"{Count}w";
-                case ResolutionUnit.Months: return $"{Count}M";
-                case ResolutionUnit.Quarters: return $"{Count}Q";
-                case ResolutionUnit.Years: return $"{Count}Y";
+                case ResolutionUnit.Months: return $"{Count}mo";
+                case ResolutionUnit.Quarters: return $"{Count}q";
+                case ResolutionUnit.Years: return $"{Count}y";
                 default: throw new InvalidDataException("Invalid resolution");
             }
         }
@@ -298,36 +280,34 @@ namespace MarketData.Primitives
             }
         }
 
-        // Insert the following static parsing methods into the existing Resolution struct (place them anywhere inside the struct body):
         public static Resolution Parse(string input)
         {
-            // Accept forms like:1m,5m,1h,1d,1w,1M,1Q,1Y
-            var m = System.Text.RegularExpressions.Regex.Match(input ?? string.Empty, "^(?<n>\\d+)\\s*(?<u>[smhdwMQY])$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            // Updated regex to support both single-char (s,m,h,d,w) and two-char (mo,q,y) units (case-insensitive)
+            var m = System.Text.RegularExpressions.Regex.Match(
+                input ?? string.Empty, 
+                @"^(?<n>\d+)\s*(?<u>s|m|mo|h|d|w|q|y)$", 
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        
             if (!m.Success)
-                throw new FormatException("Expected format like '1m', '5m', '1h', '1d', '1w', '1M', '1Q', or '1Y'.");
+                throw new FormatException("Expected format like '1s', '1m', '5m', '1h', '1d', '1w', '1mo', '1q', or '1y'.");
 
             var n = uint.Parse(m.Groups["n"].Value, System.Globalization.CultureInfo.InvariantCulture);
-            var u = m.Groups["u"].Value;
+            var u = m.Groups["u"].Value.ToLowerInvariant();
 
-            ResolutionUnit unit = u.ToLowerInvariant() switch
+            ResolutionUnit unit = u switch
             {
                 "s" => ResolutionUnit.Seconds,
                 "m" => ResolutionUnit.Minutes,
                 "h" => ResolutionUnit.Hours,
                 "d" => ResolutionUnit.Days,
                 "w" => ResolutionUnit.Weeks,
-                _ => MapUpperUnits(u)
+                "mo" => ResolutionUnit.Months,
+                "q" => ResolutionUnit.Quarters,
+                "y" => ResolutionUnit.Years,
+                _ => throw new FormatException($"Unknown unit '{u}'.")
             };
 
             return new Resolution(n, unit);
-
-            static ResolutionUnit MapUpperUnits(string u) => u switch
-            {
-                "M" => ResolutionUnit.Months,
-                "Q" => ResolutionUnit.Quarters,
-                "Y" => ResolutionUnit.Years,
-                _ => throw new FormatException($"Unknown unit '{u}'.")
-            };
         }
 
         public static bool TryParse(string input, out Resolution resolution)
@@ -336,32 +316,34 @@ namespace MarketData.Primitives
             if (string.IsNullOrWhiteSpace(input))
                 return false;
 
-            var m = System.Text.RegularExpressions.Regex.Match(input.Trim(), "^(?<n>\\d+)\\s*(?<u>[smhdwMQY])$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            // Updated regex to support both single-char and two-char units (case-insensitive)
+            var m = System.Text.RegularExpressions.Regex.Match(
+                input.Trim(), 
+                @"^(?<n>\d+)\s*(?<u>s|m|mo|h|d|w|q|y)$", 
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        
             if (!m.Success)
                 return false;
 
             if (!uint.TryParse(m.Groups["n"].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n))
                 return false;
 
-            var u = m.Groups["u"].Value;
-            ResolutionUnit unit;
-            switch (u.ToLowerInvariant())
+            var u = m.Groups["u"].Value.ToLowerInvariant();
+            ResolutionUnit unit = u switch
             {
-                case "s": unit = ResolutionUnit.Seconds; break;
-                case "m": unit = ResolutionUnit.Minutes; break;
-                case "h": unit = ResolutionUnit.Hours; break;
-                case "d": unit = ResolutionUnit.Days; break;
-                case "w": unit = ResolutionUnit.Weeks; break;
-                default:
-                    {
-                        var upper = u.ToUpperInvariant();
-                        if (upper == "M") unit = ResolutionUnit.Months;
-                        else if (upper == "Q") unit = ResolutionUnit.Quarters;
-                        else if (upper == "Y") unit = ResolutionUnit.Years;
-                        else return false;
-                        break;
-                    }
-            }
+                "s" => ResolutionUnit.Seconds,
+                "m" => ResolutionUnit.Minutes,
+                "h" => ResolutionUnit.Hours,
+                "d" => ResolutionUnit.Days,
+                "w" => ResolutionUnit.Weeks,
+                "mo" => ResolutionUnit.Months,
+                "q" => ResolutionUnit.Quarters,
+                "y" => ResolutionUnit.Years,
+                _ => default
+            };
+
+            if (u != "s" && u != "m" && u != "mo" && u != "h" && u != "d" && u != "w" && u != "Mo" && u != "q" && u != "y")
+                return false;
 
             resolution = new Resolution(n, unit);
             return true;
