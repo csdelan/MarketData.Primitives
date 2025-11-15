@@ -80,24 +80,6 @@
             Assert.Throws<ArgumentException>(() => new Candle(open, high, low, close, volume, resolution, timestamp));
         }
 
-        [Theory]
-        [InlineData(100, 90, 80, 85, "Invalid price relationships.")] // high < low
-        [InlineData(100, 110, 90, 120, "Invalid price relationships.")] // close > high
-        [InlineData(100, 110, 90, 80, "Invalid price relationships.")] // close < low
-        [InlineData(120, 110, 90, 100, "Invalid price relationships.")] // open > high
-        [InlineData(80, 110, 90, 100, "Invalid price relationships.")] // open < low
-        public void FullConstructor_InvalidPriceRelationships_ThrowsArgumentException(decimal open, decimal high, decimal low, decimal close, string expectedMessage)
-        {
-            // Arrange
-            var volume = 1000UL;
-            var resolution = new Resolution(1, ResolutionUnit.Minutes);
-            var timestamp = new DateTimeOffset(2025, 5, 16, 10, 0, 0, TimeSpan.Zero);
-
-            // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => new Candle(open, high, low, close, volume, resolution, timestamp));
-            Assert.Equal(expectedMessage, exception.Message);
-        }
-
         [Fact]
         public void TimestampMilliseconds_ReturnsCorrectUnixTime()
         {

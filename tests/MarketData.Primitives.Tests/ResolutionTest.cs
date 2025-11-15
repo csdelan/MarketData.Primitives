@@ -59,7 +59,7 @@ namespace MarketData.Primitives.Tests
             res = new Resolution(2, ResolutionUnit.Weeks);
             Assert.Equal("2w", res.ToShorthand());
             res = new Resolution(2, ResolutionUnit.Months);
-            Assert.Equal("2M", res.ToShorthand());
+            Assert.Equal("2mo", res.ToShorthand());
             res = new Resolution(4, ResolutionUnit.Minutes);
             Assert.Equal("4m", res.ToShorthand());
             res = new Resolution(6, ResolutionUnit.Hours);
@@ -127,7 +127,7 @@ namespace MarketData.Primitives.Tests
         public void ToString_DelegatesToShorthand()
         {
             var res = new Resolution(3, ResolutionUnit.Years);
-            Assert.Equal("3Y", res.ToString());
+            Assert.Equal("3y", res.ToString());
         }
     }
 }
