@@ -220,7 +220,7 @@ namespace MarketData.Primitives.Tests
             var series = new CandleSeries();
             var firstCandle = CreateCandle(100m, 110m, 90m, 105m, 1000UL, _baseTimestamp);
             var secondCandle = CreateCandle(108m, 115m, 95m, 110m, 1200UL, _baseTimestamp.AddMinutes(1));
-            series.AppendCandles(new[] { firstCandle, secondCandle });
+            series.AppendCandles((IEnumerable<Candle>)new[] { firstCandle, secondCandle });
 
             // Act
             var gap = series.GetGap(secondCandle);
