@@ -40,6 +40,14 @@ namespace MarketData.Primitives.Models
         /// </summary>
         protected ulong _volume;
 
+        // Lazy-cached price arrays for technical indicators
+        private decimal[]? _cachedClosePrices;
+        private decimal[]? _cachedOpenPrices;
+        private decimal[]? _cachedHighPrices;
+        private decimal[]? _cachedLowPrices;
+        private decimal[]? _cachedVolumes;
+        private int _cachedCount = -1; // Track when cache was built
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CandleSeries"/> class with the specified initial capacity.
         /// </summary>
@@ -117,6 +125,18 @@ namespace MarketData.Primitives.Models
         public ReadOnlySpan<Candle> AsSpan() => new ReadOnlySpan<Candle>(_buffer, 0, _count);
 
         /// <summary>
+        /// Gets a read-only span over a range of candles using C# range syntax.
+        /// </summary>
+        /// <param name="range">The range of candles to return (e.g., 0..10, ^20.., etc.).</param>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> containing the specified range of candles.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if the range is invalid.</exception>
+        public ReadOnlySpan<Candle> AsSpan(Range range)
+        {
+            var (start, length) = range.GetOffsetAndLength(_count);
+            return AsSpan(start, length);
+        }
+
+        /// <summary>
         /// Gets a read-only span over a range of candles.
         /// </summary>
         /// <param name="start">The zero-based starting index of the range.</param>
@@ -177,6 +197,179 @@ namespace MarketData.Primitives.Models
         }
 
         /// <summary>
+        /// Gets all close prices as a read-only span.
+        /// </summary>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of close prices.</returns>
+        /// <remarks>
+        /// This method uses lazy caching to avoid repeated allocations.
+        /// The cache is automatically invalidated when candles are added.
+        /// </remarks>
+        public ReadOnlySpan<decimal> GetClosePrices()
+        {
+            if (_cachedClosePrices == null || _cachedCount != _count)
+            {
+                _cachedClosePrices = ExtractPrices(c => c.Close);
+                _cachedCount = _count;
+            }
+            return new ReadOnlySpan<decimal>(_cachedClosePrices, 0, _count);
+        }
+
+        /// <summary>
+        /// Gets a range of close prices as a read-only span.
+        /// </summary>
+        /// <param name="range">The range to extract (e.g., 0..10, ^20.., etc.).</param>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of close prices for the specified range.</returns>
+        public ReadOnlySpan<decimal> GetClosePrices(Range range)
+        {
+            return GetClosePrices()[range];
+        }
+
+        /// <summary>
+        /// Gets all open prices as a read-only span.
+        /// </summary>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of open prices.</returns>
+        /// <remarks>
+        /// This method uses lazy caching to avoid repeated allocations.
+        /// The cache is automatically invalidated when candles are added.
+        /// </remarks>
+        public ReadOnlySpan<decimal> GetOpenPrices()
+        {
+            if (_cachedOpenPrices == null || _cachedCount != _count)
+            {
+                _cachedOpenPrices = ExtractPrices(c => c.Open);
+            }
+            return new ReadOnlySpan<decimal>(_cachedOpenPrices, 0, _count);
+        }
+
+        /// <summary>
+        /// Gets a range of open prices as a read-only span.
+        /// </summary>
+        /// <param name="range">The range to extract (e.g., 0..10, ^20.., etc.).</param>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of open prices for the specified range.</returns>
+        public ReadOnlySpan<decimal> GetOpenPrices(Range range)
+        {
+            return GetOpenPrices()[range];
+        }
+
+        /// <summary>
+        /// Gets all high prices as a read-only span.
+        /// </summary>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of high prices.</returns>
+        /// <remarks>
+        /// This method uses lazy caching to avoid repeated allocations.
+        /// The cache is automatically invalidated when candles are added.
+        /// </remarks>
+        public ReadOnlySpan<decimal> GetHighPrices()
+        {
+            if (_cachedHighPrices == null || _cachedCount != _count)
+            {
+                _cachedHighPrices = ExtractPrices(c => c.High);
+            }
+            return new ReadOnlySpan<decimal>(_cachedHighPrices, 0, _count);
+        }
+
+        /// <summary>
+        /// Gets a range of high prices as a read-only span.
+        /// </summary>
+        /// <param name="range">The range to extract (e.g., 0..10, ^20.., etc.).</param>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of high prices for the specified range.</returns>
+        public ReadOnlySpan<decimal> GetHighPrices(Range range)
+        {
+            return GetHighPrices()[range];
+        }
+
+        /// <summary>
+        /// Gets all low prices as a read-only span.
+        /// </summary>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of low prices.</returns>
+        /// <remarks>
+        /// This method uses lazy caching to avoid repeated allocations.
+        /// The cache is automatically invalidated when candles are added.
+        /// </remarks>
+        public ReadOnlySpan<decimal> GetLowPrices()
+        {
+            if (_cachedLowPrices == null || _cachedCount != _count)
+            {
+                _cachedLowPrices = ExtractPrices(c => c.Low);
+            }
+            return new ReadOnlySpan<decimal>(_cachedLowPrices, 0, _count);
+        }
+
+        /// <summary>
+        /// Gets a range of low prices as a read-only span.
+        /// </summary>
+        /// <param name="range">The range to extract (e.g., 0..10, ^20.., etc.).</param>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of low prices for the specified range.</returns>
+        public ReadOnlySpan<decimal> GetLowPrices(Range range)
+        {
+            return GetLowPrices()[range];
+        }
+
+        /// <summary>
+        /// Gets all volumes as a read-only span.
+        /// </summary>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of volumes.</returns>
+        /// <remarks>
+        /// This method uses lazy caching to avoid repeated allocations.
+        /// The cache is automatically invalidated when candles are added.
+        /// </remarks>
+        public ReadOnlySpan<decimal> GetVolumes()
+        {
+            if (_cachedVolumes == null || _cachedCount != _count)
+            {
+                _cachedVolumes = ExtractVolumes();
+            }
+            return new ReadOnlySpan<decimal>(_cachedVolumes, 0, _count);
+        }
+
+        /// <summary>
+        /// Gets a range of volumes as a read-only span.
+        /// </summary>
+        /// <param name="range">The range to extract (e.g., 0..10, ^20.., etc.).</param>
+        /// <returns>A <see cref="ReadOnlySpan{T}"/> of volumes for the specified range.</returns>
+        public ReadOnlySpan<decimal> GetVolumes(Range range)
+        {
+            return GetVolumes()[range];
+        }
+
+        /// <summary>
+        /// Extracts prices from candles using the specified selector function.
+        /// </summary>
+        /// <param name="selector">Function to extract price from a candle.</param>
+        /// <returns>Array of extracted prices.</returns>
+        private decimal[] ExtractPrices(Func<Candle, decimal> selector)
+        {
+            var prices = new decimal[_count];
+            for (int i = 0; i < _count; i++)
+                prices[i] = selector(_buffer[i]);
+            return prices;
+        }
+
+        /// <summary>
+        /// Extracts volumes from candles (converting ulong to decimal).
+        /// </summary>
+        /// <returns>Array of volumes as decimals.</returns>
+        private decimal[] ExtractVolumes()
+        {
+            var volumes = new decimal[_count];
+            for (int i = 0; i < _count; i++)
+                volumes[i] = _buffer[i].Volume;
+            return volumes;
+        }
+
+        /// <summary>
+        /// Invalidates all cached price arrays.
+        /// </summary>
+        /// <remarks>
+        /// This is called automatically when candles are added to ensure cache consistency.
+        /// </remarks>
+        private void InvalidatePriceCache()
+        {
+            _cachedCount = -1;
+            // Don't null out arrays - let lazy init reuse them if same size
+        }
+
+        /// <summary>
         /// Appends multiple candles to the series from an enumerable collection.
         /// </summary>
         /// <param name="candles">The collection of candles to append.</param>
@@ -196,7 +389,10 @@ namespace MarketData.Primitives.Models
                 anyAdded = true;
             }
             if (anyAdded)
+            {
+                InvalidatePriceCache();
                 OnPropertyChanged(nameof(Candles));
+            }
         }
 
         /// <summary>
@@ -219,7 +415,10 @@ namespace MarketData.Primitives.Models
                 AppendCandle(candle, false);
             }
             if (candles.Length > 0)
+            {
+                InvalidatePriceCache();
                 OnPropertyChanged(nameof(Candles));
+            }
         }
 
         /// <summary>
@@ -255,7 +454,10 @@ namespace MarketData.Primitives.Models
             _volume += candle.Volume;
 
             if (notify)
+            {
+                InvalidatePriceCache();
                 OnPropertyChanged(nameof(Candles));
+            }
         }
 
         /// <summary>
@@ -279,6 +481,65 @@ namespace MarketData.Primitives.Models
         /// </summary>
         /// <value>The total count of candles in the series.</value>
         public int Count => _count;
+
+        /// <summary>
+        /// Gets a candle at the specified index.
+        /// </summary>
+        /// <param name="index">The zero-based index of the candle to retrieve.</param>
+        /// <returns>The <see cref="Candle"/> at the specified index.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if index is out of range.</exception>
+        public Candle this[int index]
+        {
+            get
+            {
+                if (index < 0 || index >= _count)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                return _buffer[index];
+            }
+        }
+
+        /// <summary>
+        /// Gets a candle using Index syntax (supports negative indices from end).
+        /// </summary>
+        /// <param name="index">The index of the candle (e.g., ^1 for last candle).</param>
+        /// <returns>The <see cref="Candle"/> at the specified index.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if index is out of range.</exception>
+        public Candle this[Index index]
+        {
+            get
+            {
+                var offset = index.GetOffset(_count);
+                return this[offset];
+            }
+        }
+
+        /// <summary>
+        /// Gets the first candle in the series.
+        /// </summary>
+        /// <value>The first <see cref="Candle"/> in the series.</value>
+        /// <exception cref="InvalidOperationException">Thrown if the series is empty.</exception>
+        public Candle First => _count > 0 ? _buffer[0] : throw new InvalidOperationException("Series is empty.");
+
+        /// <summary>
+        /// Gets the last candle in the series.
+        /// </summary>
+        /// <value>The last <see cref="Candle"/> in the series.</value>
+        /// <exception cref="InvalidOperationException">Thrown if the series is empty.</exception>
+        public Candle Last => _count > 0 ? _buffer[_count - 1] : throw new InvalidOperationException("Series is empty.");
+
+        /// <summary>
+        /// Gets the timestamp of the first candle in the series.
+        /// </summary>
+        /// <value>The timestamp of the first candle.</value>
+        /// <exception cref="InvalidOperationException">Thrown if the series is empty.</exception>
+        public DateTimeOffset FirstTimestamp => _count > 0 ? First.Timestamp : throw new InvalidOperationException("Series is empty.");
+
+        /// <summary>
+        /// Gets the timestamp of the last candle in the series.
+        /// </summary>
+        /// <value>The timestamp of the last candle.</value>
+        /// <exception cref="InvalidOperationException">Thrown if the series is empty.</exception>
+        public DateTimeOffset LastTimestamp => _count > 0 ? Last.Timestamp : throw new InvalidOperationException("Series is empty.");
 
         /// <summary>
         /// Gets the opening price of the first candle in the series.
