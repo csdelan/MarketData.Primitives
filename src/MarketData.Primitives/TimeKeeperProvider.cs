@@ -33,38 +33,5 @@
         {
             _currentTimeKeeper = new SimulatedTimeKeeper(initialTime);
         }
-
-        private class RealTimeKeeper : ITimeKeeper
-        {
-            public RealTimeKeeper() { }
-            public DateTimeOffset Now => DateTimeOffset.Now;
-            public Task SetTime(DateTimeOffset time) => WaitTime(time);
-            public Task WaitTime(DateTimeOffset time)
-            {
-                if (time <= Now) return Task.CompletedTask;
-                return Task.Delay(time - Now);
-            }
-        }
-
-        private class SimulatedTimeKeeper : ITimeKeeper
-        {
-            private DateTimeOffset _currentTime;
-            public SimulatedTimeKeeper(DateTimeOffset initialTime)
-            {
-                _currentTime = initialTime;
-            }
-            public DateTimeOffset Now => _currentTime;
-            public Task SetTime(DateTimeOffset time)
-            {
-                _currentTime = time;
-                return Task.CompletedTask;
-            }
-            public Task WaitTime(DateTimeOffset time)
-            {
-                if (time <= _currentTime) return Task.CompletedTask;
-                _currentTime = time;
-                return Task.CompletedTask;
-            }
-        }
     }
 }
