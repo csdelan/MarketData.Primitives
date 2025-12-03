@@ -67,11 +67,6 @@ namespace MarketData.Primitives
             return next - start;
         }
 
-        public TimeSpan GetExactDuration()
-        {
-            return GetDurationToNextResolutionEvent(TimeKeeperProvider.Now);
-        }
-
         public TimeSpan GetTimeSpan()
         {
             if (Count == 0)
@@ -200,15 +195,6 @@ namespace MarketData.Primitives
             int targetMonth = ((targetQuarter - 1) * 3) + 1;
 
             return new DateTimeOffset(targetYear, targetMonth, 1, 0, 0, 0, date.Offset);
-        }
-
-        /// <summary>
-        /// Gets the DateTimeOffset representing the start of the next Resolution boundary
-        /// </summary>
-        /// <exception cref="NotSupportedException">The ResolutionUnit must be a valid value</exception>
-        public DateTimeOffset GetNextEvent()
-        {
-            return GetNextEvent(TimeKeeperProvider.Now);
         }
 
         public override string ToString() => ToShorthand();

@@ -58,7 +58,7 @@ namespace MarketData.Primitives
         public static CandleSeries FilterToSession(this CandleSeries series, TimeSpan open, TimeSpan close, TimeZoneInfo tz)
         {
             if (!series.Candles.Any()) return new CandleSeries();
-            var duration = series.Resolution.IsIntraday ? series.Resolution.GetExactDuration() : TimeSpan.Zero;
+            var duration = series.Resolution.IsIntraday ? series.Resolution.GetTimeSpan() : TimeSpan.Zero;
             var filtered = series.Candles.Where(c => MarketHours.IsWithinSession(c.Timestamp, duration, open, close, tz));
             return new CandleSeries(filtered);
         }
