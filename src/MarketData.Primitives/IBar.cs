@@ -8,4 +8,10 @@
         decimal Close { get; set; }
         ulong Volume { get; set; }
     }
+
+    public interface IMetric
+    {
+        string Name { get; set; }
+        public decimal Value { get; set; }
+    }
 }
