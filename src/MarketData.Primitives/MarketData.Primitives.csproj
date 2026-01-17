@@ -5,22 +5,25 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;DebugIsolated</Configurations>
+    <VersionPrefix>1.0.0</VersionPrefix>
+	<VersionSuffix></VersionSuffix>
   </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageOutputPath>C:\Users\csdel\source\MyLocalNuget\</PackageOutputPath>
+	<PropertyGroup>
+		<EnablePostBuildCopy Condition="'$(EnablePostBuildCopy)' == ''">true</EnablePostBuildCopy>
+		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
 	</PropertyGroup>
 
+	<Target Name="PushToLocalFeed" AfterTargets="Pack">
+		<Exec Command="dotnet nuget push &quot;$(OutputPath)..\$(PackageId).$(PackageVersion).nupkg&quot; --source &quot;Local Nuget&quot; --skip-duplicate" />
+	</Target>
+
 	<ItemGroup>
+	  <PackageReference Include="Core" Version="1.0.0" />
 	  <PackageReference Include="GitVersion.MsBuild" Version="6.5.0">
 	    <PrivateAssets>all</PrivateAssets>
 	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	  </PackageReference>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\..\..\Core\Core\Core.csproj" />
 	</ItemGroup>
 
 </Project>
