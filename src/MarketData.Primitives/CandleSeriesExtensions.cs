@@ -4,6 +4,9 @@ namespace MarketData.Primitives
 {
     public static class CandleSeriesExtensions
     {
+        private static readonly TimeSpan NyseOpen = new(9, 30, 0);
+        private static readonly TimeSpan NyseClose = new(16, 0, 0);
+
         /// <summary>
         /// Returns a new <see cref="CandleSeries"/> sorted by <see cref="Candle.Timestamp"/> in ascending order.
         /// </summary>
@@ -59,7 +62,7 @@ namespace MarketData.Primitives
         {
             if (!series.Candles.Any()) return new CandleSeries();
             var duration = series.Resolution.IsIntraday ? series.Resolution.GetTimeSpan() : TimeSpan.Zero;
-            var filtered = series.Candles.Where(c => MarketHours.IsWithinSession(c.Timestamp, duration, open, close, tz));
+            var filtered = series.Candles.Where(c => IsWithinSession(c.Timestamp, duration, open, close, tz));
             return new CandleSeries(filtered);
         }
 
@@ -69,7 +72,7 @@ namespace MarketData.Primitives
         /// <param name="series">The source series.</param>
         /// <returns>A new series containing only candles within the NYSE regular session.</returns>
         public static CandleSeries FilterToNyseRegularSession(this CandleSeries series)
-            => series.FilterToSession(MarketHours.NyseOpen, MarketHours.NyseClose, MarketHours.EasternTimeZone);
+            => series.FilterToSession(NyseOpen, NyseClose, GetEasternTimeZone());
 
         /// <summary>
         /// Aggregates the source candles into the specified target <see cref="Resolution"/>.
@@ -124,6 +127,23 @@ namespace MarketData.Primitives
                 .OrderBy(c => c.Timestamp);
 
             return new CandleSeries(aggregated);
+        }
+
+        private static bool IsWithinSession(DateTimeOffset startUtc, TimeSpan duration, TimeSpan sessionOpen, TimeSpan sessionClose, TimeZoneInfo tz)
+        {
+            var start = TimeZoneInfo.ConvertTime(startUtc, tz);
+            var end = TimeZoneInfo.ConvertTime(startUtc + duration, tz);
+            return start.TimeOfDay >= sessionOpen && end.TimeOfDay <= sessionClose;
+        }
+
+        private static TimeZoneInfo GetEasternTimeZone()
+        {
+            try { return TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"); }
+            catch
+            {
+                try { return TimeZoneInfo.FindSystemTimeZoneById("America/New_York"); }
+                catch { return TimeZoneInfo.Local; }
+            }
         }
     }
 }
