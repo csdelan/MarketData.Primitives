@@ -1,0 +1,3 @@
+[submodule "src/external/Core"]
+	path = src/external/Core
+	url = https://github.com/csdelan/Core

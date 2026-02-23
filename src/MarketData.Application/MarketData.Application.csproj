@@ -7,5 +7,8 @@
     <Configurations>Debug;Release;DebugIsolated</Configurations>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MarketData.Primitives\MarketData.Primitives.csproj" />
+  </ItemGroup>
 
 </Project>
