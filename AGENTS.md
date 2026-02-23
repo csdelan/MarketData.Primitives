@@ -12,7 +12,7 @@ Core primitives remain focused on deterministic, reusable domain types and logic
 For market schedules/calendars/providers:
 
 1. Define service contracts in the application layer.
-   - Examples: `IMarketCalendarService`, `IMarketHoursService`.
+   - Example: `IMarketTimingService` (consolidated market calendar and hours service).
 2. Keep external provider implementations in infrastructure.
    - Exchange APIs, holiday feeds, cache, retries, persistence, system clock adapters.
 3. Keep composition/DI registration in a host/API/worker project.
@@ -42,7 +42,7 @@ When introducing calendar/hour services:
 - Put **provider implementations** in infrastructure when they involve external systems, process/runtime concerns, or environment wiring.
 
 For this repository direction:
-- `IMarketCalendarService` + `IMarketHoursService`: contract in application; concrete providers in infrastructure.
+- `IMarketTimingService`: consolidated contract in application; concrete providers in infrastructure.
 - `ITimeKeeper`: keep abstraction in application contracts; implementations are infrastructure/runtime concerns:
   - real-time/system clock implementation belongs in infrastructure/runtime wiring.
   - simulation/backtest clock may live in test-support or simulation modules, but still outside primitives business logic.
