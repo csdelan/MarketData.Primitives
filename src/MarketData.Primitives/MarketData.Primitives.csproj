@@ -21,11 +21,20 @@
 	</Target>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\..\Core\Core\Core.csproj" />
+	  <Compile Remove="bin\**" />
+	  <EmbeddedResource Remove="bin\**" />
+	  <None Remove="bin\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <PackageReference Include="GitVersion.MsBuild" Version="6.5.0">
 	    <PrivateAssets>all</PrivateAssets>
 	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	  </PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\external\Core\Core\Core.csproj" />
 	</ItemGroup>
 
 </Project>
