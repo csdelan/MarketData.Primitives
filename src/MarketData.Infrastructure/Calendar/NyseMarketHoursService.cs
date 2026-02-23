@@ -7,7 +7,7 @@ public sealed class NyseMarketHoursService(ITimeKeeper timeKeeper, IMarketCalend
 {
     public async Task<bool> IsOpenAsync(string venue, DateTimeOffset asOfUtc, CancellationToken ct = default)
     {
-        DateTimeOffset local = TimeZoneInfo.ConvertTime(asOfUtc, MarketHours.EasternTimeZone);
+        DateTimeOffset local = TimeZoneInfo.ConvertTime(asOfUtc, MarketTimeZoneProvider.EasternTimeZone);
         DateOnly date = DateOnly.FromDateTime(local.DateTime);
 
         if (!await calendarService.IsTradingDayAsync(venue, date, ct))
@@ -24,7 +24,7 @@ public sealed class NyseMarketHoursService(ITimeKeeper timeKeeper, IMarketCalend
     public async Task<MarketHoursStatus> GetCurrentStatusAsync(string venue, CancellationToken ct = default)
     {
         DateTimeOffset asOfUtc = timeKeeper.Now;
-        DateTimeOffset asOfLocal = TimeZoneInfo.ConvertTime(asOfUtc, MarketHours.EasternTimeZone);
+        DateTimeOffset asOfLocal = TimeZoneInfo.ConvertTime(asOfUtc, MarketTimeZoneProvider.EasternTimeZone);
         DateOnly date = DateOnly.FromDateTime(asOfLocal.DateTime);
 
         bool isTradingDay = await calendarService.IsTradingDayAsync(venue, date, ct);

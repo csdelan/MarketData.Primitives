@@ -1,3 +1,4 @@
+using MarketData.Application.Contracts;
 using MarketData.Primitives;
 
 namespace MarketData.Infrastructure.TimeKeeping;

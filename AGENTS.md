@@ -43,7 +43,7 @@ When introducing calendar/hour services:
 
 For this repository direction:
 - `IMarketCalendarService` + `IMarketHoursService`: contract in application; concrete providers in infrastructure.
-- `ITimeKeeper`: keep abstraction in shared/domain contracts; implementations are infrastructure/runtime concerns:
+- `ITimeKeeper`: keep abstraction in application contracts; implementations are infrastructure/runtime concerns:
   - real-time/system clock implementation belongs in infrastructure/runtime wiring.
   - simulation/backtest clock may live in test-support or simulation modules, but still outside primitives business logic.
 
@@ -63,6 +63,7 @@ Why:
 ## Implementation guardrails for contributors
 - Favor small, composable interfaces.
 - Keep primitives serializable and side-effect free when possible.
+- Keep `ITimeKeeper` in application contracts; implementations belong in infrastructure/test-support.
 - Avoid introducing infrastructure dependencies into `src/MarketData.Primitives`.
 - If adding new projects, update solution structure and this document.
 
