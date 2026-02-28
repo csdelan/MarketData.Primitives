@@ -51,6 +51,23 @@ public sealed class NyseMarketHoursService(ITimeKeeper timeKeeper) : IMarketTimi
         return localTime >= session.Open && localTime < session.Close;
     }
 
+    public async Task<DateTimeOffset?> GetTodayCloseUtcAsync(string venue, CancellationToken ct = default)
+    {
+        EnsureVenue(venue);
+
+        // Resolve "today" in Eastern time, since that's where NYSE lives.
+        DateTimeOffset asOfEastern = TimeZoneInfo.ConvertTime(timeKeeper.Now, MarketTimeZoneProvider.EasternTimeZone);
+        DateOnly today = DateOnly.FromDateTime(asOfEastern.DateTime);
+
+        var session = await GetSessionAsync(venue, today, ct);
+        if (session is null) return null;   // weekend or holiday → no close today
+
+        // Build a DateTimeOffset for today's close in Eastern time, then express as UTC.
+        var closeDateTime = today.ToDateTime(session.Close);
+        var easternOffset = MarketTimeZoneProvider.EasternTimeZone.GetUtcOffset(closeDateTime);
+        return new DateTimeOffset(closeDateTime, easternOffset).ToUniversalTime();
+    }
+
     public async Task<MarketHoursStatus> GetCurrentStatusAsync(string venue, CancellationToken ct = default)
     {
         DateTimeOffset asOfUtc = timeKeeper.Now;
