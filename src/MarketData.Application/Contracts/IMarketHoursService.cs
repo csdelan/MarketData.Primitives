@@ -17,4 +17,10 @@ public interface IMarketTimingService
     Task<bool> IsOpenAsync(string venue, DateTimeOffset asOfUtc, CancellationToken ct = default);
 
     Task<MarketHoursStatus> GetCurrentStatusAsync(string venue, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns today's regular-session close time expressed as UTC.
+    /// Returns <c>null</c> when today is not a trading day (weekend, holiday).
+    /// </summary>
+    Task<DateTimeOffset?> GetTodayCloseUtcAsync(string venue, CancellationToken ct = default);
 }
