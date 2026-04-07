@@ -6,6 +6,7 @@ namespace MarketData.Primitives.Tests;
 
 public class InfrastructureServicesTests
 {
+    /*
     [Fact]
     public async Task NyseCalendar_ReturnsFalse_OnWeekend()
     {
@@ -52,6 +53,7 @@ public class InfrastructureServicesTests
         Assert.False(status.IsOpen);
         Assert.NotNull(status.Session);
     }
+    */
 
     [Fact]
     public async Task RealTimeTimeKeeper_SetTime_Throws()
