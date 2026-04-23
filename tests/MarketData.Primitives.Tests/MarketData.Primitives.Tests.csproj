@@ -16,9 +16,24 @@
     </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\MarketData.Primitives\MarketData.Primitives.csproj" />
-    <ProjectReference Include="..\..\src\MarketData.Application\MarketData.Application.csproj" />
-    <ProjectReference Include="..\..\src\MarketData.Infrastructure\MarketData.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\MarketData.Primitives\MarketData.Primitives.csproj">
+      <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\MarketData.Application\MarketData.Application.csproj">
+      <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\MarketData.Infrastructure\MarketData.Infrastructure.csproj">
+      <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Core">
+		<HintPath>$(BlueSkiesOutput)\Core\Core.dll</HintPath>
+	</Reference>
   </ItemGroup>
 
   <ItemGroup>

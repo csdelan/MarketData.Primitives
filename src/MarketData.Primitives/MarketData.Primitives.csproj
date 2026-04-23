@@ -7,7 +7,7 @@
     <Configurations>Debug;Release;DebugIsolated</Configurations>
     <VersionPrefix>1.0.0</VersionPrefix>
 	<VersionSuffix></VersionSuffix>
-	<BaseOutputPath>..\..\..\bin\</BaseOutputPath>
+	<BaseOutputPath></BaseOutputPath>
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
@@ -33,10 +33,11 @@
 	  </PackageReference>
 	</ItemGroup>
 
-	<!-- Conditional project reference for Core - works in both standalone and composed solutions -->
 	<ItemGroup>
-	  <!-- When in TradingSystem solution (Core at root level) -->
-	  <ProjectReference Include="..\..\..\Core\Core\Core.csproj" Condition="Exists('..\..\..\Core\Core\Core.csproj')" />
+	  <Reference Include="Core">
+	    <HintPath>$(BlueSkiesOutput)\Core\Core.dll</HintPath>
+	    <Private>True</Private>
+	  </Reference>
 	</ItemGroup>
 
 </Project>

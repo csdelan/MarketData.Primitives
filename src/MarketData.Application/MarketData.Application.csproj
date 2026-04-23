@@ -8,7 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MarketData.Primitives\MarketData.Primitives.csproj" />
+    <ProjectReference Include="..\MarketData.Primitives\MarketData.Primitives.csproj">
+      <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>
