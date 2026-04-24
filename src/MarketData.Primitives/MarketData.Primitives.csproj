@@ -11,15 +11,6 @@
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
-	<PropertyGroup>
-		<EnablePostBuildCopy Condition="'$(EnablePostBuildCopy)' == ''">true</EnablePostBuildCopy>
-		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-	</PropertyGroup>
-
-	<Target Name="PushToLocalFeed" AfterTargets="Pack">
-		<Exec Command="dotnet nuget push &quot;$(OutputPath)..\$(PackageId).$(PackageVersion).nupkg&quot; --source &quot;Local Nuget&quot; --skip-duplicate" />
-	</Target>
-
 	<ItemGroup>
 	  <Compile Remove="bin\**" />
 	  <EmbeddedResource Remove="bin\**" />
