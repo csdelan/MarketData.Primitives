@@ -34,7 +34,7 @@ MarketData.Application     ← Contracts: interfaces, domain models for services
 MarketData.Infrastructure  ← Implementations: NYSE calendar, real-time clock, JSON config
 ```
 
-**External dependency:** `src/external/Core` is a git submodule providing `ValueObject`, logging, and other shared utilities.
+**External dependencies:** see `DEPENDENCIES.md` for published dependency paths and upstream usage notes. In particular, `Core.dll` is resolved from `$(BlueSkiesOutput)` and its published `README.md` should be read before making Core-dependent changes.
 
 ### Key Domain Types
 

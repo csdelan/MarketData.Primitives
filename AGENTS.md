@@ -67,6 +67,10 @@ Why:
 - Avoid introducing infrastructure dependencies into `src/MarketData.Primitives`.
 - If adding new projects, update solution structure and this document.
 
+## External dependency notes
+- Dependency-specific published artifact guidance lives in `DEPENDENCIES.md`.
+- Read `DEPENDENCIES.md` before making changes that depend on binaries resolved from `$(BlueSkiesOutput)`.
+
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
 ### Available skills
