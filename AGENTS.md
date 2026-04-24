@@ -1,5 +1,7 @@
 # AGENTS.md
 
+See also: [`DEPENDENCIES.md`](DEPENDENCIES.md) for published dependency guidance and external assembly notes.
+
 ## Purpose of this repository
 `MarketData.Primitives` solution now contains three layers for market-data/timekeeping work:
 - `MarketData.Primitives` (domain primitives)
