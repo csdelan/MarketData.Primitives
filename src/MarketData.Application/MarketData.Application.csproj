@@ -5,6 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;DebugIsolated</Configurations>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <Description>initial release</Description>
+	<PackageTags></PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +18,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-	<None Include="..\..\USAGE.md" Link="USAGE.md" CopyToPublishDirectory="Always" />
+	<None Include="..\..\AGENTS.md" Link="AGENTS.md" Pack="true" PackagePath="" />
+	<None Include="..\..\CLAUDE.md" Link="CLAUDE.md" Pack="true" PackagePath="" />
+	<None Include="..\..\USAGE.md" Link="USAGE.md" CopyToPublishDirectory="Always" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>

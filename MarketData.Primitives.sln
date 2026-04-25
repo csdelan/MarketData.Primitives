@@ -19,8 +19,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		AGENTS.md = AGENTS.md
 		CLAUDE.md = CLAUDE.md
-		DEPENDENCIES.md = DEPENDENCIES.md
 		USAGE.md = USAGE.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{A1A74A5B-3853-4564-A305-501058FF0ABC}"
+	ProjectSection(SolutionItems) = preProject
+		scripts\Publish-Nuget.ps1 = scripts\Publish-Nuget.ps1
 	EndProjectSection
 EndProject
 Global
