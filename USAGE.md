@@ -127,6 +127,41 @@ It is a good fit for:
 
 The `Values` dictionary lets you attach named decimal metrics without creating a new class for every metric set.
 
+### `RatioSymbol`
+
+Use `RatioSymbol` to parse, validate, and carry a synthetic ratio symbol of the form `"NUM/DEN"`.
+
+Main use cases:
+
+- validate that a user-supplied symbol string is a ratio before routing it through a decorator
+- extract the numerator and denominator legs for separate data fetches
+- produce a canonical string representation that can round-trip through parse
+
+Key behaviors:
+
+- both legs are uppercased and whitespace-trimmed on construction
+- `RatioSymbol.IsRatio(string)` is the fast check; returns false for null, empty, missing slash, empty half, or multiple slashes
+- `RatioSymbol.Parse(string)` throws `FormatException` on invalid input; `TryParse` is the non-throwing alternative
+- `ToString()` always returns `"UPPER/UPPER"` regardless of the original casing
+
+### `RatioMath`
+
+Use `RatioMath` to combine two pre-fetched candle collections into a synthetic ratio series. This is a pure utility with no I/O — callers are responsible for fetching aligned data.
+
+`CombineCandles(Candle numerator, Candle denominator)` produces one ratio candle:
+
+- `Open = num.Open / den.Open`, `Close = num.Close / den.Close`
+- `High = num.High / den.Low`, `Low = num.Low / den.High` — this preserves the invariant that high ≥ low for the derived ratio
+- `Volume = 0` (volume of a ratio is undefined)
+- throws `ArgumentException` if resolutions or timestamps differ
+- throws `DivideByZeroException` if any denominator OHLC field is zero
+
+`CombineSeries(IReadOnlyList<Candle> numerator, IReadOnlyList<Candle> denominator)` produces the full ratio series:
+
+- inner-joins both legs on `Timestamp`; drops bars present on only one side
+- silently skips bars where any denominator OHLC field is zero
+- returns results sorted ascending by `Timestamp`
+
 ### `RthEstimator`
 
 Use `RthEstimator` when you need a simple estimate of how many intraday bars fit into one NYSE regular trading day.
@@ -295,6 +330,16 @@ Use:
 - `NyseMarketHoursService`
 
 This combination covers market-open checks, holiday-aware scheduling, and today's close-time calculations.
+
+### Ratio symbol analysis
+
+Use:
+
+- `RatioSymbol`
+- `RatioMath`
+- `Candle`, `CandleSeries`
+
+Typical flow: check `RatioSymbol.IsRatio(symbol)`, call `Parse` to get the typed value, fetch each leg independently, then pass both leg series to `RatioMath.CombineSeries`. Feed the resulting `IReadOnlyList<Candle>` into a `CandleSeries` or directly into indicator calculations — indicators consume OHLCV and ignore the symbol field entirely.
 
 ### Simulation or backtest-friendly logic
 

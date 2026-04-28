@@ -45,6 +45,8 @@ MarketData.Infrastructure  ← Implementations: NYSE calendar, real-time clock, 
 | `Resolution(uint Count, ResolutionUnit Unit)` | Flexible timeframe (Seconds → Years); variable-length units use calendar math |
 | `CandleSeries` | Thread-safe, `ArrayPool<T>`-backed collection with lazy-cached price arrays |
 | `Quote` | Bid/Ask/Last with spread calculations |
+| `RatioSymbol` | Readonly struct representing a synthetic `"NUM/DEN"` symbol; parse/validate ratio notation |
+| `RatioMath` | Pure static helpers to combine two candles or candle series into a ratio series |
 
 ### Key Application Contracts
 
@@ -59,6 +61,16 @@ MarketData.Infrastructure  ← Implementations: NYSE calendar, real-time clock, 
 - Holiday/half-day overrides loaded from JSON: `~/OneDrive/TradingSystem/config/holidays/{year}.json`
 - `RealTimeTimeKeeper` — live system clock implementation of `ITimeKeeper`
 - `MarketTimeZoneProvider` — Eastern Time resolution utility
+
+### Ratio Symbol Conventions
+
+- `RatioSymbol` is the canonical way to represent and validate `"NUM/DEN"` synthetic symbols.
+- Both legs are uppercased and trimmed on construction; nested slashes and empty halves are rejected.
+- `RatioSymbol.IsRatio(string)` is the cheap check; `TryParse` / `Parse` produce a typed value.
+- `RatioMath.CombineCandles` asserts matching `Resolution` and `Timestamp` — alignment is the **caller's** responsibility.
+- High = `numHigh / denLow`, Low = `numLow / denHigh` — this preserves "high ≥ low" for the derived ratio.
+- `Volume` of a ratio candle is always `0`; volume of a derived instrument is undefined.
+- `CombineSeries` inner-joins on `Timestamp`, silently drops unpaired bars and bars where any denominator OHLC field is zero.
 
 ## Key Patterns and Constraints
 

@@ -5,9 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release</Configurations>
-    <VersionPrefix>1.0.0</VersionPrefix>
+    <VersionPrefix>1.1.0</VersionPrefix>
 	<VersionSuffix></VersionSuffix>
-    <Description>initial release</Description>
+    <Description>Market Primitive classes</Description>
 	<PackageTags></PackageTags>
 	<BaseOutputPath></BaseOutputPath>
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
