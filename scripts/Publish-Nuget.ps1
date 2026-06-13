@@ -1,6 +1,7 @@
 param(
     [string]$NuGetPath = "\\BART\MyNuget",
-    [string]$Configuration = "Debug"
+    [string]$Configuration = "Debug",
+    [string]$ReleaseNotes = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,6 +39,11 @@ if (Test-Path -LiteralPath $artifactsPath) {
 
 New-Item -ItemType Directory -Path $artifactsPath | Out-Null
 
+$packArgs = @("--configuration", $Configuration, "--no-build", "--output", $artifactsPath)
+if ($ReleaseNotes -ne "") {
+    $packArgs += "/p:PackageReleaseNotes=$ReleaseNotes"
+}
+
 Push-Location $repoRoot
 try {
     dotnet restore $solutionPath
@@ -47,7 +53,7 @@ try {
     }
 
     foreach ($project in $projects) {
-        dotnet pack $project --configuration $Configuration --no-build --output $artifactsPath
+        dotnet pack $project @packArgs
     }
 
     $packages = Get-ChildItem -LiteralPath $artifactsPath -Filter "*.nupkg" -File |
