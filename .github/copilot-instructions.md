@@ -8,8 +8,8 @@ It is structured as three layers (no mixing allowed):
 | Layer | Project | Responsibility |
 |---|---|---|
 | Domain | `src/MarketData.Primitives` | Value objects: `Bar`, `Candle`, `CandleSeries`, `Resolution`, `Quote`, enums |
-| Application | `src/MarketData.Application` | Service contracts/interfaces: `ITimeKeeper`, `IMarketTimingService`, `MarketHoursProvider`, records |
-| Infrastructure | `src/MarketData.Infrastructure` | Implementations: `NyseMarketHoursService`, `RealTimeTimeKeeper`, `MarketTimeZoneProvider` |
+| Application | `src/MarketData.Application` | Service contracts/interfaces: `IMarketTimingService`, `MarketHoursProvider`, records (clock is the BCL `System.TimeProvider`) |
+| Infrastructure | `src/MarketData.Infrastructure` | Implementations: `NyseMarketHoursService`, `MarketTimeZoneProvider` |
 
 Tests live in `tests/MarketData.Primitives.Tests` and reference all three layers.
 
@@ -63,9 +63,9 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 
 1. **Do not** add infrastructure or I/O code to `MarketData.Primitives` or `MarketData.Application`.
 2. **Do not** couple `MarketData.Primitives` to `MarketData.Application` (primitives has no project reference to application).
-3. **Do not** call `DateTime.UtcNow` / `DateTimeOffset.UtcNow` directly in business logic — always inject `ITimeKeeper`.
+3. **Do not** call `DateTime.UtcNow` / `DateTimeOffset.UtcNow` directly in business logic — always inject `System.TimeProvider` and call `GetUtcNow()`.
 4. **Do not** hard-code venue names — accept them as `string` parameters (e.g., `"NYSE"`).
-5. Keep `ITimeKeeper` and `IMarketTimingService` in the **Application** layer; their implementations belong in **Infrastructure** or test-support.
+5. Keep `IMarketTimingService` in the **Application** layer; its implementations belong in **Infrastructure**. The clock is the BCL `System.TimeProvider` — no custom clock abstraction to place.
 6. All new public service contracts go in `src/MarketData.Application/Contracts/`.
 7. If adding a new project, update the solution file **and** `AGENTS.md`.
 
@@ -80,8 +80,10 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 - **`Resolution`** — `struct(uint Count, ResolutionUnit Unit)`. Supports `Seconds`→`Years`. Variable-length units (`Months`, `Quarters`, `Years`) require calendar math and **cannot** be converted to a fixed `TimeSpan` via `GetTimeSpan()`. Use `GetDurationToNextResolutionEvent(DateTimeOffset)` instead. `Parse("5m")` / `TryParse` supported.
 - **`Quote`** — Bid/Ask/Last with computed `Spread` and `SpreadPercent`.
 
+### Clock (BCL `System.TimeProvider`)
+- **`TimeProvider`** — primary clock abstraction; `GetUtcNow()` for the instant. `TimeProvider.System` (production) or `Core.ManualTimeProvider` (`Advance`/`SetUtcNow`, deterministic) for sim/tests. Injected into `NyseMarketHoursService`.
+
 ### Application contracts (`src/MarketData.Application/Contracts/`)
-- **`ITimeKeeper`** — `Now`, `SetTime`, `WaitTime`. Primary clock abstraction.
 - **`IMarketTimingService`** — venue-aware async service: `IsTradingDayAsync`, `GetSessionAsync`, `GetHolidaysAsync`, `IsOpenAsync`, `GetCurrentStatusAsync`, `GetTodayCloseUtcAsync`.
 - **`MarketSession`** — `record(TimeOnly Open, TimeOnly Close, bool IsHalfDay)`.
 - **`MarketHoursStatus`** — `record(bool IsTradingDay, bool IsOpen, DateTimeOffset AsOfLocal, MarketSession? Session)`.
@@ -90,8 +92,7 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 - **`MarketHoursProvider`** — synchronous façade over `IMarketTimingService` (uses `GetAwaiter().GetResult()`). Venue is hard-wired to `"NYSE"`.
 
 ### Infrastructure (`src/MarketData.Infrastructure/`)
-- **`NyseMarketHoursService`** — `IMarketTimingService` for NYSE. Computus-based Easter/Good Friday. Holiday/half-day overrides loaded from JSON: `~/OneDrive/TradingSystem/config/holidays/holidays-{year}.json`. Falls back to built-in defaults if file missing. Throws `NotSupportedException` for non-NYSE venues.
-- **`RealTimeTimeKeeper`** — Live `ITimeKeeper`; `SetTime` throws, `WaitTime` uses `Task.Delay`.
+- **`NyseMarketHoursService`** — `IMarketTimingService` for NYSE. Takes a `TimeProvider` ctor arg. Computus-based Easter/Good Friday. Holiday/half-day overrides loaded from JSON: `~/OneDrive/TradingSystem/config/holidays/holidays-{year}.json`. Falls back to built-in defaults if file missing. Throws `NotSupportedException` for non-NYSE venues.
 - **`MarketTimeZoneProvider`** — `internal static` helper; resolves Eastern Time zone cross-platform (`"Eastern Standard Time"` → `"America/New_York"` fallback).
 
 ---
@@ -103,7 +104,7 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 - Value objects inherit from `Core.ValueObject` and override `GetEqualityComponents()`.
 - Use `init`-only properties or private setters on value objects.
 - Prefer `record` for immutable data transfer objects (`MarketSession`, `MarketHoursStatus`).
-- No `static DateTime.UtcNow` calls — always inject `ITimeKeeper`.
+- No `static DateTime.UtcNow` calls — always inject `System.TimeProvider` and call `GetUtcNow()`.
 - Venue identifier is always an explicit `string` parameter, never assumed or hard-coded in contracts.
 
 ---
@@ -112,18 +113,15 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 
 - Framework: **xUnit** with `[Fact]` and `[Theory]`/`[InlineData]`/`[MemberData]`.
 - Naming: `MethodName_Scenario_ExpectedResult`.
-- Test doubles: prefix fake/stub implementations with `Fake` (e.g., `FakeTimeKeeper`). Place them as `private sealed class` within the test class unless shared.
+- Test doubles: prefix fake/stub implementations with `Fake`. Place them as `private sealed class` within the test class unless shared.
 - Always cover: timezone boundaries, DST transitions, holiday/half-day edge cases for any market-hours code.
-- For `ITimeKeeper`-driven tests, use a `FakeTimeKeeper` that accepts a `DateTimeOffset` in the constructor.
+- For clock-driven tests, inject a `Core.ManualTimeProvider` — construct it with a fixed start instant and `Advance`/`SetUtcNow` to drive the timeline deterministically.
 
-Example `FakeTimeKeeper` pattern (already in `InfrastructureServicesTests.cs`):
+Example clock pattern (see `InfrastructureServicesTests.cs`):
 ```csharp
-private sealed class FakeTimeKeeper(DateTimeOffset now) : ITimeKeeper
-{
-    public DateTimeOffset Now { get; private set; } = now;
-    public Task SetTime(DateTimeOffset time) { Now = time; return Task.CompletedTask; }
-    public Task WaitTime(DateTimeOffset time) { Now = time; return Task.CompletedTask; }
-}
+var clock = new ManualTimeProvider(new DateTimeOffset(2025, 5, 19, 20, 30, 0, TimeSpan.Zero)); // 16:30 ET
+var sut = new NyseMarketHoursService(clock);
+var status = await sut.GetCurrentStatusAsync("NYSE");
 ```
 
 ---

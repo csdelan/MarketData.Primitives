@@ -8,7 +8,7 @@ namespace MarketData.Infrastructure.Calendar;
 /// Consolidated NYSE market hours service providing both calendar and hours functionality.
 /// Supports configurable holidays and half-days loaded from JSON configuration files.
 /// </summary>
-public sealed class NyseMarketHoursService(ITimeKeeper timeKeeper, string? configPath = null) : IMarketTimingService
+public sealed class NyseMarketHoursService(TimeProvider timeProvider, string? configPath = null) : IMarketTimingService
 {
     private readonly string _configPath = configPath ?? Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -101,7 +101,7 @@ public sealed class NyseMarketHoursService(ITimeKeeper timeKeeper, string? confi
         EnsureVenue(venue);
 
         // Resolve "today" in Eastern time, since that's where NYSE lives.
-        DateTimeOffset asOfEastern = TimeZoneInfo.ConvertTime(timeKeeper.Now, MarketTimeZoneProvider.EasternTimeZone);
+        DateTimeOffset asOfEastern = TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), MarketTimeZoneProvider.EasternTimeZone);
         DateOnly today = DateOnly.FromDateTime(asOfEastern.DateTime);
 
         var session = await GetSessionAsync(venue, today, ct);
@@ -121,7 +121,7 @@ public sealed class NyseMarketHoursService(ITimeKeeper timeKeeper, string? confi
     /// <returns>A <see cref="MarketHoursStatus"/> with current market information.</returns>
     public async Task<MarketHoursStatus> GetCurrentStatusAsync(string venue, CancellationToken ct = default)
     {
-        DateTimeOffset asOfUtc = timeKeeper.Now;
+        DateTimeOffset asOfUtc = timeProvider.GetUtcNow();
         DateTimeOffset asOfLocal = TimeZoneInfo.ConvertTime(asOfUtc, MarketTimeZoneProvider.EasternTimeZone);
         DateOnly date = DateOnly.FromDateTime(asOfLocal.DateTime);
 

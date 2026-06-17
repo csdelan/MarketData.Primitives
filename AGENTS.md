@@ -24,10 +24,12 @@ All calendar/session logic must support both:
 - **real-time operation**
 - **simulation/backtest operation**
 
-Use `ITimeKeeper` as the primary clock abstraction for this behavior.
-- Services that depend on "current time" should accept an `ITimeKeeper` (or an adapter built on it).
+Use the BCL `System.TimeProvider` as the primary clock abstraction for this behavior (the
+ecosystem standard adopted in Core 2.0).
+- Services that depend on "current time" should accept a `TimeProvider` and call `GetUtcNow()`.
 - Avoid directly calling `DateTime.UtcNow` / `DateTimeOffset.UtcNow` in business logic.
-- Prefer APIs that are deterministic for a supplied time/date, plus explicit "now" helpers powered by `ITimeKeeper`.
+- Prefer APIs that are deterministic for a supplied time/date, plus explicit "now" helpers powered by `TimeProvider`.
+- Production injects `TimeProvider.System`; simulation/backtest/tests inject `Core.ManualTimeProvider` (`Advance`/`SetUtcNow`).
 
 ## Contract design guidance
 When introducing calendar/hour services:
@@ -35,7 +37,7 @@ When introducing calendar/hour services:
 - Model trading-day status and session windows (including half-days).
 - Keep timezone behavior explicit.
 - Separate pure calculations from I/O calls.
-- Make simulation behavior reproducible by driving it from `ITimeKeeper`.
+- Make simulation behavior reproducible by driving it from a `Core.ManualTimeProvider`.
 
 ## Provider placement rationale (Application vs Infrastructure)
 - Keep **interfaces/contracts** in the application layer (or application-abstractions split) so use-cases depend on stable business-facing contracts.
@@ -43,9 +45,9 @@ When introducing calendar/hour services:
 
 For this repository direction:
 - `IMarketTimingService`: consolidated contract in application; concrete providers in infrastructure.
-- `ITimeKeeper`: keep abstraction in application contracts; implementations are infrastructure/runtime concerns:
-  - real-time/system clock implementation belongs in infrastructure/runtime wiring.
-  - simulation/backtest clock may live in test-support or simulation modules, but still outside primitives business logic.
+- Clock: depend on the BCL `System.TimeProvider` directly — no MarketData-owned clock interface or implementation:
+  - production wires `TimeProvider.System` at the composition root.
+  - simulation/backtest/tests inject `Core.ManualTimeProvider`, still outside primitives business logic.
 
 Why:
 - It preserves deterministic business logic and testability.
@@ -57,13 +59,13 @@ Why:
   - timezone boundaries
   - DST transitions
   - holiday and half-day behavior
-  - deterministic `ITimeKeeper`-driven scenarios
+  - deterministic `ManualTimeProvider`-driven scenarios
 - Add tests for both real-time clock adapters and simulated/backtest clocks where relevant.
 
 ## Implementation guardrails for contributors
 - Favor small, composable interfaces.
 - Keep primitives serializable and side-effect free when possible.
-- Keep `ITimeKeeper` in application contracts; implementations belong in infrastructure/test-support.
+- Depend on `System.TimeProvider` for the clock; no MarketData-owned clock abstraction to place.
 - Avoid introducing infrastructure dependencies into `src/MarketData.Primitives`.
 - If adding new projects, update solution structure and this document.
 
