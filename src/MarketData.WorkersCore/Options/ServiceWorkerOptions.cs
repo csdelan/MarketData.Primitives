@@ -23,4 +23,12 @@ public sealed class ServiceWorkerOptions
 
     /// <summary>Path the Hangfire dashboard is mounted at.</summary>
     public string DashboardPath { get; set; } = "/hangfire";
+
+    /// <summary>
+    /// When <c>true</c> (the default), this process serves the Hangfire dashboard at
+    /// <see cref="DashboardPath"/>. Set to <c>false</c> on worker instances that should run jobs
+    /// but not expose a dashboard UI — designate exactly one process (or a standalone dashboard
+    /// app) as the single entry point.
+    /// </summary>
+    public bool ExposeHangfireDashboard { get; set; } = true;
 }

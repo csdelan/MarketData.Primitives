@@ -28,11 +28,16 @@ try
 
     app.UseSerilogRequestLogging();
 
-    // Hangfire monitoring dashboard. The allow-all filter is dev-only — see HangfireSetup.
-    app.UseHangfireDashboard(workerOptions.DashboardPath, new DashboardOptions
+    // Hangfire monitoring dashboard — only on the designated process (ExposeHangfireDashboard: true).
+    // All processes share the same SQLite store, so any one of them sees the full job history.
+    // Set ExposeHangfireDashboard: false in appsettings.json for worker-only instances.
+    if (workerOptions.ExposeHangfireDashboard)
     {
-        Authorization = [new AllowAllDashboardAuthorizationFilter()],
-    });
+        app.UseHangfireDashboard(workerOptions.DashboardPath, new DashboardOptions
+        {
+            Authorization = [new AllowAllDashboardAuthorizationFilter()],
+        });
+    }
 
     // Dev convenience: manually enqueue a job by key without waiting for its schedule.
     app.MapPost("/run/{jobKey}", (string jobKey, IBackgroundJobClient jobs) =>

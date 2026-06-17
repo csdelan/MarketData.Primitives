@@ -8,6 +8,8 @@
     <VersionPrefix>2.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Description>Reusable service-worker host infrastructure: market-aware scheduling, Hangfire wiring, job dispatch/eventing/heartbeats, options, and time-series document base. Hosts add jobs on top.</Description>
+    <!-- Pinned so Hangfire's stored job records remain valid if the project file is renamed. -->
+    <AssemblyName>MarketData.Workers</AssemblyName>
   </PropertyGroup>
 
   <!-- Host-infra library: depends on the ASP.NET shared framework so all the Microsoft.Extensions.*

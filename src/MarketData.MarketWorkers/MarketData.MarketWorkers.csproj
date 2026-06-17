@@ -31,4 +31,8 @@
     <ProjectReference Include="..\MarketData.WorkersCore\MarketData.WorkersCore.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="data\" />
+  </ItemGroup>
+
 </Project>
