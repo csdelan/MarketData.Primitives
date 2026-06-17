@@ -26,13 +26,17 @@ Configurations: `Debug`, `Release`, `DebugIsolated`. GitVersion auto-generates `
 
 ## Architecture
 
-Three-layer separation — do not collapse layers:
+Two-layer separation — do not collapse layers:
 
 ```
-MarketData.Primitives      ← Domain: value objects, enums, collections (depends only on Core)
-MarketData.Application     ← Contracts: interfaces, domain models for services
-MarketData.Infrastructure  ← Implementations: NYSE calendar, real-time clock, JSON config
+MarketData.Primitives   ← Domain: value objects, enums, collections (depends only on Core)
+MarketData.Application   ← Contracts + implementations: service interfaces, domain models,
+                           NYSE calendar/session logic, JSON holiday config
 ```
+
+> The former `MarketData.Infrastructure` project was retired and its implementations
+> (`NyseMarketHoursService`, `MarketTimeZoneProvider`) folded into `MarketData.Application`
+> under the `MarketData.Application.Calendar` namespace.
 
 **External dependencies:** see `DEPENDENCIES.md` for published dependency paths and upstream usage notes. In particular, `Core.dll` is resolved from `$(BlueSkiesOutput)` and its published `README.md` should be read before making Core-dependent changes.
 
@@ -48,19 +52,19 @@ MarketData.Infrastructure  ← Implementations: NYSE calendar, real-time clock, 
 | `RatioSymbol` | Readonly struct representing a synthetic `"NUM/DEN"` symbol; parse/validate ratio notation |
 | `RatioMath` | Pure static helpers to combine two candles or candle series into a ratio series |
 
-### Key Application Contracts
+### Key Application Contracts (`MarketData.Application.Contracts` / `.Services`)
 
 - **`System.TimeProvider`** — primary clock abstraction (from Core 2.0's ecosystem standard); all business logic depends on this instead of `DateTime.UtcNow`. `GetUtcNow()` for the instant; `TimeProvider.System` in production, `Core.ManualTimeProvider` (`Advance`/`SetUtcNow`) for simulation/backtest. (Replaces the removed `ITimeKeeper`/`RealTimeTimeKeeper`/`SimulatedTimeKeeper`.)
 - **`IMarketTimingService`** — venue-aware market hours: `IsOpenAsync`, `GetSessionAsync`, `GetHolidaysAsync`, `GetTodayCloseUtcAsync`, `GetCurrentStatusAsync`.
 - **`MarketHoursProvider`** — synchronous facade over `IMarketTimingService` (uses `GetAwaiter().GetResult()`).
 - **`MarketSession`** / **`MarketHoursStatus`** — immutable records for session windows and current status.
 
-### Infrastructure Details
+### Calendar Implementations (`MarketData.Application.Calendar`)
 
-- `NyseMarketHoursService` — NYSE calendar with Computus-based Easter/Good Friday, observed holidays, and half-days.
+- `NyseMarketHoursService` — `IMarketTimingService` implementation; NYSE calendar with Computus-based Easter/Good Friday, observed holidays, and half-days.
 - Holiday/half-day overrides loaded from JSON: `~/OneDrive/TradingSystem/config/holidays/{year}.json`
 - Clock — inject `System.TimeProvider`: `TimeProvider.System` (live) or `Core.ManualTimeProvider` (deterministic). No MarketData-owned clock type.
-- `MarketTimeZoneProvider` — Eastern Time resolution utility
+- `MarketTimeZoneProvider` — `internal` Eastern Time resolution utility
 
 ### Ratio Symbol Conventions
 

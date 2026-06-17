@@ -3,15 +3,17 @@
 ## Repository purpose
 
 This repo provides **foundational market-data domain types and market-hours services** for a trading system.
-It is structured as three layers (no mixing allowed):
+It is structured as two layers (no mixing allowed):
 
 | Layer | Project | Responsibility |
 |---|---|---|
 | Domain | `src/MarketData.Primitives` | Value objects: `Bar`, `Candle`, `CandleSeries`, `Resolution`, `Quote`, enums |
-| Application | `src/MarketData.Application` | Service contracts/interfaces: `IMarketTimingService`, `MarketHoursProvider`, records (clock is the BCL `System.TimeProvider`) |
-| Infrastructure | `src/MarketData.Infrastructure` | Implementations: `NyseMarketHoursService`, `MarketTimeZoneProvider` |
+| Application | `src/MarketData.Application` | Service contracts/interfaces (`IMarketTimingService`, `MarketHoursProvider`, records; clock is the BCL `System.TimeProvider`) **and** their implementations (`NyseMarketHoursService`, `MarketTimeZoneProvider`) |
 
-Tests live in `tests/MarketData.Primitives.Tests` and reference all three layers.
+> A separate `MarketData.Infrastructure` project was retired; its implementations now live in
+> `src/MarketData.Application/Calendar/` under the `MarketData.Application.Calendar` namespace.
+
+Tests live in `tests/MarketData.Primitives.Tests` and reference both layers.
 
 An external git submodule at `src/external/Core` provides the base `ValueObject` class used by domain types.
 
@@ -38,7 +40,6 @@ dotnet build tests/MarketData.Primitives.Tests/MarketData.Primitives.Tests.cspro
 
 # Build individual projects
 dotnet build src/MarketData.Application/MarketData.Application.csproj
-dotnet build src/MarketData.Infrastructure/MarketData.Infrastructure.csproj
 dotnet build src/MarketData.Primitives/MarketData.Primitives.csproj /p:UseGitVersionTask=false
 ```
 
@@ -61,12 +62,12 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 
 ## Architecture constraints
 
-1. **Do not** add infrastructure or I/O code to `MarketData.Primitives` or `MarketData.Application`.
+1. **Do not** add I/O or external-transport code to `MarketData.Primitives`.
 2. **Do not** couple `MarketData.Primitives` to `MarketData.Application` (primitives has no project reference to application).
 3. **Do not** call `DateTime.UtcNow` / `DateTimeOffset.UtcNow` directly in business logic — always inject `System.TimeProvider` and call `GetUtcNow()`.
 4. **Do not** hard-code venue names — accept them as `string` parameters (e.g., `"NYSE"`).
-5. Keep `IMarketTimingService` in the **Application** layer; its implementations belong in **Infrastructure**. The clock is the BCL `System.TimeProvider` — no custom clock abstraction to place.
-6. All new public service contracts go in `src/MarketData.Application/Contracts/`.
+5. Keep `IMarketTimingService` and its implementations in the **Application** layer: contracts in `Contracts/`, providers in `Calendar/`. The clock is the BCL `System.TimeProvider` — no custom clock abstraction to place.
+6. All new public service contracts go in `src/MarketData.Application/Contracts/`; provider implementations go in `src/MarketData.Application/Calendar/`.
 7. If adding a new project, update the solution file **and** `AGENTS.md`.
 
 ---
@@ -91,7 +92,7 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 ### Application services (`src/MarketData.Application/Services/`)
 - **`MarketHoursProvider`** — synchronous façade over `IMarketTimingService` (uses `GetAwaiter().GetResult()`). Venue is hard-wired to `"NYSE"`.
 
-### Infrastructure (`src/MarketData.Infrastructure/`)
+### Calendar implementations (`src/MarketData.Application/Calendar/`)
 - **`NyseMarketHoursService`** — `IMarketTimingService` for NYSE. Takes a `TimeProvider` ctor arg. Computus-based Easter/Good Friday. Holiday/half-day overrides loaded from JSON: `~/OneDrive/TradingSystem/config/holidays/holidays-{year}.json`. Falls back to built-in defaults if file missing. Throws `NotSupportedException` for non-NYSE venues.
 - **`MarketTimeZoneProvider`** — `internal static` helper; resolves Eastern Time zone cross-platform (`"Eastern Standard Time"` → `"America/New_York"` fallback).
 

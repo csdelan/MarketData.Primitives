@@ -25,10 +25,6 @@
       <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\MarketData.Infrastructure\MarketData.Infrastructure.csproj">
-      <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
-      <Private>True</Private>
-    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>

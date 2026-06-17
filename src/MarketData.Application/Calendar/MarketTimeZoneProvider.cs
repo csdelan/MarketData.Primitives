@@ -1,4 +1,4 @@
-namespace MarketData.Infrastructure.Calendar;
+namespace MarketData.Application.Calendar;
 
 internal static class MarketTimeZoneProvider
 {

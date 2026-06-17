@@ -1,20 +1,27 @@
 # AGENTS.md
 
 ## Purpose of this repository
-`MarketData.Primitives` solution now contains three layers for market-data/timekeeping work:
+`MarketData.Primitives` solution contains two layers for market-data/timekeeping work:
 - `MarketData.Primitives` (domain primitives)
-- `MarketData.Application` (service contracts/use-case-facing abstractions)
-- `MarketData.Infrastructure` (provider implementations/runtime adapters)
+- `MarketData.Application` (service contracts/use-case-facing abstractions **and** their
+  concrete provider implementations)
 
 Core primitives remain focused on deterministic, reusable domain types and logic.
+
+> A separate `MarketData.Infrastructure` project was retired; its provider implementations
+> (`NyseMarketHoursService`, `MarketTimeZoneProvider`) now live in `MarketData.Application`
+> under the `MarketData.Application.Calendar` namespace.
 
 ## Architecture direction (agreed)
 For market schedules/calendars/providers:
 
-1. Define service contracts in the application layer.
+1. Define service contracts in the application layer (`MarketData.Application.Contracts`).
    - Example: `IMarketTimingService` (consolidated market calendar and hours service).
-2. Keep external provider implementations in infrastructure.
+2. Keep provider implementations in the application layer alongside the contracts
+   (`MarketData.Application.Calendar`).
    - Exchange APIs, holiday feeds, cache, retries, persistence, system clock adapters.
+   - If a future provider takes on heavy external/runtime dependencies (HTTP SDKs, persistence,
+     etc.), reconsider extracting a dedicated infrastructure project at that time.
 3. Keep composition/DI registration in a host/API/worker project.
 
 Do **not** couple provider-specific APIs or HTTP clients directly into primitives.
@@ -39,12 +46,15 @@ When introducing calendar/hour services:
 - Separate pure calculations from I/O calls.
 - Make simulation behavior reproducible by driving it from a `Core.ManualTimeProvider`.
 
-## Provider placement rationale (Application vs Infrastructure)
-- Keep **interfaces/contracts** in the application layer (or application-abstractions split) so use-cases depend on stable business-facing contracts.
-- Put **provider implementations** in infrastructure when they involve external systems, process/runtime concerns, or environment wiring.
+## Provider placement rationale
+- Keep **interfaces/contracts** in `MarketData.Application.Contracts` so use-cases depend on stable business-facing contracts.
+- Keep **provider implementations** in `MarketData.Application.Calendar`. The current providers are
+  pure calendar/timezone logic with no external transport, so a separate infrastructure project
+  added overhead without benefit. Revisit that split only if a provider takes on external systems,
+  process/runtime concerns, or environment wiring.
 
 For this repository direction:
-- `IMarketTimingService`: consolidated contract in application; concrete providers in infrastructure.
+- `IMarketTimingService`: consolidated contract and its concrete providers both in `MarketData.Application`.
 - Clock: depend on the BCL `System.TimeProvider` directly — no MarketData-owned clock interface or implementation:
   - production wires `TimeProvider.System` at the composition root.
   - simulation/backtest/tests inject `Core.ManualTimeProvider`, still outside primitives business logic.

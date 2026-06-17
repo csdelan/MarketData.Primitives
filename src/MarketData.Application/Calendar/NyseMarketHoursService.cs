@@ -2,7 +2,7 @@ using System.Text.Json;
 using MarketData.Application.Contracts;
 using MarketData.Primitives;
 
-namespace MarketData.Infrastructure.Calendar;
+namespace MarketData.Application.Calendar;
 
 /// <summary>
 /// Consolidated NYSE market hours service providing both calendar and hours functionality.

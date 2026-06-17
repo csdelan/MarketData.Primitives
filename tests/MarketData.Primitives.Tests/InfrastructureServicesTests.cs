@@ -1,5 +1,5 @@
 using Core;
-using MarketData.Infrastructure.Calendar;
+using MarketData.Application.Calendar;
 
 namespace MarketData.Primitives.Tests;
 

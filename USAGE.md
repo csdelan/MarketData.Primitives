@@ -2,13 +2,12 @@
 
 ## Purpose
 
-The `MarketData` projects provide three layers:
+The `MarketData` projects provide two layers:
 
 - `MarketData.Primitives`: core market-data models such as candles, quotes, resolutions, and time-series containers.
-- `MarketData.Application`: business-facing contracts for market hours and time control.
-- `MarketData.Infrastructure`: concrete implementations for real-time clock access and NYSE calendar/session behavior.
+- `MarketData.Application`: business-facing contracts for market hours and time control, **plus** the concrete NYSE calendar/session implementations that satisfy them.
 
-Use the primitives project to model price data. Use the application project to code against stable abstractions. Use the infrastructure project when you need a working implementation for real-time execution.
+Use the primitives project to model price data. Use the application project both to code against stable abstractions and to get a working implementation for real-time execution.
 
 ## MarketData.Primitives
 
@@ -253,8 +252,6 @@ It is most useful for:
 - getting the next open without directly handling async calls
 
 Prefer `IMarketTimingService` directly in new async-first code.
-
-## MarketData.Infrastructure
 
 ### Clock implementations
 
