@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Configurations>Debug;Release</Configurations>
+    <VersionPrefix>2.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <Description>Reusable service-worker host infrastructure: market-aware scheduling, Hangfire wiring, job dispatch/eventing/heartbeats, options, and time-series document base. Hosts add jobs on top.</Description>
+  </PropertyGroup>
+
+  <!-- Host-infra library: depends on the ASP.NET shared framework so all the Microsoft.Extensions.*
+       hosting/DI/options extensions and Hangfire.AspNetCore APIs resolve without per-package hunting. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MarketData.Application\MarketData.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Core" Version="2.0.0" />
+    <PackageReference Include="Core.Persistence" Version="2.0.0" />
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
+    <PackageReference Include="Hangfire.Storage.SQLite" Version="0.4.1" />
+  </ItemGroup>
+
+</Project>

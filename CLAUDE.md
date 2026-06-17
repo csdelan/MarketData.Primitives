@@ -29,14 +29,56 @@ Configurations: `Debug`, `Release`, `DebugIsolated`. GitVersion auto-generates `
 Two-layer separation — do not collapse layers:
 
 ```
-MarketData.Primitives   ← Domain: value objects, enums, collections (depends only on Core)
-MarketData.Application   ← Contracts + implementations: service interfaces, domain models,
-                           NYSE calendar/session logic, JSON holiday config
+MarketData.Primitives    ← Domain: value objects, enums, collections (depends only on Core)
+MarketData.Application    ← Contracts + implementations: service interfaces, domain models,
+                            NYSE calendar/session logic, JSON holiday config
+MarketData.Workers        ← Reusable worker-host infrastructure: market-aware scheduling, Hangfire
+                            wiring, job dispatch/eventing/heartbeats, options, time-series doc base
+                            (depends on Application; namespace MarketData.Workers)
+MarketData.ServiceWorkers ← Host template: bundles job implementations + config on top of
+                            MarketData.Workers (the only project a new worker clone re-creates)
 ```
 
 > The former `MarketData.Infrastructure` project was retired and the calendar/session
 > implementations (`NyseMarketCalendar`, `MarketContextProvider`, `MarketTimeZoneProvider`)
 > live in `MarketData.Application` under the `MarketData.Application.Calendar` namespace.
+
+### MarketData.Workers (reusable host infrastructure)
+
+Class library (`src/MarketData.Workers`, namespace `MarketData.Workers`) holding everything a
+service-worker host needs that does **not** vary per project. It uses a `Microsoft.AspNetCore.App`
+framework reference so the hosting/DI/options extensions and Hangfire APIs resolve cleanly.
+
+- **Dispatch (`Execution/`):** `Core.BackgroundJobExecutor` resolves/runs jobs by `Key`;
+  `JobDispatcher` (the Hangfire target) wraps it to publish start/finish events, capture a
+  `JobResult`, and record runs in `JobRunRegistry`. (`IBackgroundJob`/`JobExecutionContext`/
+  `BackgroundJobExecutor` live in **`Core`** — namespace `Core` — not in Primitives/Application.)
+- **Scheduling (`Scheduling/`):** hosted `MarketScheduler : IMarketScheduler` computes next-fire
+  instants from `MarketClock`/`IMarketContextProvider` (reused from Application) and enqueues into
+  Hangfire. Triggers (`ScheduleTrigger`): `IntervalAlways`, `MarketOpen`, `MarketClose`,
+  `EveryNMinutesDuringMarketHours` (the "5m candle"), `Cron`. Waits use `TimeProvider`, so schedules
+  are backtest-drivable under `Core.ManualTimeProvider`.
+- **Hangfire** (in-memory storage, `Hosting/HangfireSetup`) is the durable executor + dashboard;
+  eventing via `Eventing/IEventPublisher` + `SerilogEventPublisher` emitting `Core.BaseEvent`
+  (service name in `Context`); `Heartbeat/HeartbeatService` publishes a periodic job-activity summary.
+- **Persistence:** `Documents/TimeSeriesDocument` (`Core.IDocument` base) for concrete time-series docs.
+- **Composition seam:** generic infra wires through
+  `Hosting/ServiceWorkerHostExtensions.AddServiceWorkerCore` (knows no specific jobs); hosts register
+  their jobs via `JobRegistrationExtensions.AddBackgroundJob<TJob>`.
+
+### MarketData.ServiceWorkers (host template)
+
+A runnable `Microsoft.NET.Sdk.Web` host (`src/MarketData.ServiceWorkers`) intended to be cloned into
+a project template. It contains **only** what varies per project: `Program.cs` + `appsettings*.json`
+(composition root) and `Jobs/` (namespace `MarketData.ServiceWorkers.Jobs`). All boilerplate comes
+from the referenced `MarketData.Workers` library.
+
+- Each host registers its jobs in `Jobs/JobRegistration.AddWorkerJobs` (typed HTTP clients via
+  `IHttpClientFactory` + `Microsoft.Extensions.Http.Resilience`, document stores, options).
+  `Program.cs` calls `AddServiceWorkerCore(config).AddWorkerJobs(config)`, maps the Hangfire
+  dashboard at `/hangfire`, and exposes a dev-only `POST /run/{jobKey}` to enqueue on demand.
+- Sample jobs: `HelloWorldJob` (interval) and `ExchangeRatesJob` (Treasury API → file DB).
+  **Everything under `Jobs/` is a placeholder** — replace per host.
 
 **External dependencies:** see `DEPENDENCIES.md` for published dependency paths and upstream usage notes. In particular, `Core.dll` is resolved from `$(BlueSkiesOutput)` and its published `README.md` should be read before making Core-dependent changes.
 
