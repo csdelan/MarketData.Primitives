@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the **MarketData.Primitives** submodule of the TradingSystem monorepo. It provides foundational market-data domain types (bars, candles, quotes, resolutions) and market-hours services (NYSE calendar, session windows, holiday logic) used across the trading platform.
+This is the **MarketData.Primitives** module. It provides foundational market-data domain types (bars, candles, quotes, resolutions) and market-hours services (NYSE calendar, session windows, holiday logic) used across the trading platform.
 
 ## Build Commands
 
@@ -34,9 +34,9 @@ MarketData.Application   ← Contracts + implementations: service interfaces, do
                            NYSE calendar/session logic, JSON holiday config
 ```
 
-> The former `MarketData.Infrastructure` project was retired and its implementations
-> (`NyseMarketHoursService`, `MarketTimeZoneProvider`) folded into `MarketData.Application`
-> under the `MarketData.Application.Calendar` namespace.
+> The former `MarketData.Infrastructure` project was retired and the calendar/session
+> implementations (`NyseMarketCalendar`, `MarketContextProvider`, `MarketTimeZoneProvider`)
+> live in `MarketData.Application` under the `MarketData.Application.Calendar` namespace.
 
 **External dependencies:** see `DEPENDENCIES.md` for published dependency paths and upstream usage notes. In particular, `Core.dll` is resolved from `$(BlueSkiesOutput)` and its published `README.md` should be read before making Core-dependent changes.
 
@@ -54,17 +54,25 @@ MarketData.Application   ← Contracts + implementations: service interfaces, do
 
 ### Key Application Contracts (`MarketData.Application.Contracts` / `.Services`)
 
-- **`System.TimeProvider`** — primary clock abstraction (from Core 2.0's ecosystem standard); all business logic depends on this instead of `DateTime.UtcNow`. `GetUtcNow()` for the instant; `TimeProvider.System` in production, `Core.ManualTimeProvider` (`Advance`/`SetUtcNow`) for simulation/backtest. (Replaces the removed `ITimeKeeper`/`RealTimeTimeKeeper`/`SimulatedTimeKeeper`.)
-- **`IMarketTimingService`** — venue-aware market hours: `IsOpenAsync`, `GetSessionAsync`, `GetHolidaysAsync`, `GetTodayCloseUtcAsync`, `GetCurrentStatusAsync`.
-- **`MarketHoursProvider`** — synchronous facade over `IMarketTimingService` (uses `GetAwaiter().GetResult()`).
-- **`MarketSession`** / **`MarketHoursStatus`** — immutable records for session windows and current status.
+The market-hours/session stack is a **synchronous, deterministic** engine (2.0). It is split on the
+clock: a pure calendar plus a clock-aware context provider. The old async `IMarketTimingService` /
+`MarketSession` / `MarketHoursStatus` / `MarketHoursProvider` / `NyseMarketHoursService` were removed.
+
+- **`System.TimeProvider`** — primary clock abstraction (Core 2.0 ecosystem standard); business logic depends on this instead of `DateTime.UtcNow`. `GetUtcNow()` for the instant; `TimeProvider.System` live, `Core.ManualTimeProvider` (`Advance`/`SetUtcNow`) for simulation/backtest.
+- **`IMarketCalendar`** — pure, **clock-free** date logic: `ClassifyDay`, `GetSessionWindow`, `GetCalendarYear`, `IsTradingDay`, `NextTradingDay`/`AddTradingDays`, `CountTradingDays`, `IsoWeekNumber`, `GetTradingDayOrdinal`, `GetPeriodStats`, `GetMonthlyExpiration`/`GetQuarterlyExpiration`/`GetWitchingDates`/`NextExpirationOnOrAfter`, `SettlementDate`.
+- **`IMarketContextProvider`** — `TimeProvider`-aware: `GetContext()`/`GetContextAt(instant)`, `GetActivePhase`, `GetLiquidity`, `IsRegularSessionOpen`, `NextRegularOpenUtc`. Venue-agnostic (wraps any `IMarketCalendar`).
+- **`MarketClock`** (`.Services`) — synchronous convenience facade (replaces `MarketHoursProvider`); **no sync-over-async**.
+- **`MarketContext`** — single-call snapshot: active phase, `SessionLiquidityLevel`, regular open/elapsed/remaining/progress, per-phase `PhaseStatus` (overnight/pre/post), next transition, trading-day ordinals, period-end flags, next expirations, owning `TradingDate`.
+- Records: **`MarketDayInfo`** (kind + holiday name), **`MarketSessionWindow`** (phase instants in UTC), **`Holiday`** (named, full vs early-close), **`MarketHolidayCalendarYear`**, **`PhaseStatus`**, **`TradingPeriodStats`**/**`TradingDayOrdinal`**, **`OptionsExpiration`**/`WitchingKind`.
+- Enums (in `MarketData.Primitives.Sessions`): `SessionLiquidityLevel`, `MarketPhase`, `MarketDayKind`; value objects `PhaseWindow`, `VenueSchedule`.
 
 ### Calendar Implementations (`MarketData.Application.Calendar`)
 
-- `NyseMarketHoursService` — `IMarketTimingService` implementation; NYSE calendar with Computus-based Easter/Good Friday, observed holidays, and half-days.
-- Holiday/half-day overrides loaded from JSON: `~/OneDrive/TradingSystem/config/holidays/{year}.json`
-- Clock — inject `System.TimeProvider`: `TimeProvider.System` (live) or `Core.ManualTimeProvider` (deterministic). No MarketData-owned clock type.
-- `MarketTimeZoneProvider` — `internal` Eastern Time resolution utility
+- `NyseMarketCalendar` — `IMarketCalendar` for the composite US-equity venue (`"US-EQ"`). Holiday data composed in precedence order: computed rules (`UsEquityHolidayRules`, Computus Good Friday + observed/nth-weekday, incl. Juneteenth from 2022) → bundled named special closures (`UsEquityClosures`: mourning days, Hurricane Sandy, 9/11) → per-year JSON overrides (`HolidayOverrideLoader`). Per-year cache.
+- **Phase model** (composite, ET): overnight futures (Sun 18:00 → Fri, daily 17:00–18:00 halt) → pre-market 04:00–09:30 → regular 09:30–16:00 (half-day 13:00) → post-market 16:00–20:00 (omitted on half days). Phases half-open `[open, close)`; higher-liquidity phase wins at shared boundaries. `VenueSchedules.UsEquityComposite()` is the schedule; add venues via new `VenueSchedule` + rules.
+- Holiday JSON overrides: `~/OneDrive/TradingSystem/config/holidays/holidays-{year}.json`. New schema `{ "holidays":[{date,name}], "earlyCloses":[{date,name}] }`; legacy bare-date arrays (`holidays`/`halfDays`) still accepted (names synthesized).
+- **Known limitations**: overnight uses the NYSE (not CME) calendar; bundled closures are historical-only (future ad-hoc closures via JSON); all quarterly expirations are `QuadWitching`.
+- `MarketTimeZoneProvider` — `internal`; `For(timeZoneId)` resolves Windows/IANA ids with fallback (cached).
 
 ### Ratio Symbol Conventions
 
@@ -80,7 +88,7 @@ MarketData.Application   ← Contracts + implementations: service interfaces, do
 
 - **`DateTimeOffset` over `DateTime`** throughout. `DateOnly`/`TimeOnly` for date/time-only semantics. UTC canonical; convert to local only at boundaries.
 - **No `DateTime.UtcNow` in business logic** — always inject `System.TimeProvider` and call `GetUtcNow()`.
-- **Venue as explicit string parameter** (e.g., `"NYSE"`) in all service APIs — do not hard-code assumptions.
+- **Venue is construction-time identity**, not a per-call parameter: build a calendar/provider for a venue (exposed as `VenueId`). Keep venue-specific assumptions out of shared logic so new venues are a `VenueSchedule` + holiday-rules swap.
 - **`CandleSeries` performance** — uses `ArrayPool<T>` and lazy-cached `ReadOnlySpan<T>` price arrays; mutations invalidate the cache.
 - **Value objects** inherit from `Core.ValueObject`; prefer `init`-only or private setters.
 - **Test doubles** — use `Core.ManualTimeProvider` for the clock; prefix any other fake/stub implementations with `Fake`.

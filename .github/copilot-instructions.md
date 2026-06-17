@@ -8,7 +8,7 @@ It is structured as two layers (no mixing allowed):
 | Layer | Project | Responsibility |
 |---|---|---|
 | Domain | `src/MarketData.Primitives` | Value objects: `Bar`, `Candle`, `CandleSeries`, `Resolution`, `Quote`, enums |
-| Application | `src/MarketData.Application` | Service contracts/interfaces (`IMarketTimingService`, `MarketHoursProvider`, records; clock is the BCL `System.TimeProvider`) **and** their implementations (`NyseMarketHoursService`, `MarketTimeZoneProvider`) |
+| Application | `src/MarketData.Application` | Contracts (`IMarketCalendar`, `IMarketContextProvider`, `MarketClock`, records; clock is the BCL `System.TimeProvider`) **and** their implementations (`NyseMarketCalendar`, `MarketContextProvider`, `MarketTimeZoneProvider`) |
 
 > A separate `MarketData.Infrastructure` project was retired; its implementations now live in
 > `src/MarketData.Application/Calendar/` under the `MarketData.Application.Calendar` namespace.
@@ -66,7 +66,7 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 2. **Do not** couple `MarketData.Primitives` to `MarketData.Application` (primitives has no project reference to application).
 3. **Do not** call `DateTime.UtcNow` / `DateTimeOffset.UtcNow` directly in business logic — always inject `System.TimeProvider` and call `GetUtcNow()`.
 4. **Do not** hard-code venue names — accept them as `string` parameters (e.g., `"NYSE"`).
-5. Keep `IMarketTimingService` and its implementations in the **Application** layer: contracts in `Contracts/`, providers in `Calendar/`. The clock is the BCL `System.TimeProvider` — no custom clock abstraction to place.
+5. Keep `IMarketCalendar` / `IMarketContextProvider` and their implementations in the **Application** layer: contracts in `Contracts/`, providers in `Calendar/`. The clock is the BCL `System.TimeProvider` — no custom clock abstraction to place.
 6. All new public service contracts go in `src/MarketData.Application/Contracts/`; provider implementations go in `src/MarketData.Application/Calendar/`.
 7. If adding a new project, update the solution file **and** `AGENTS.md`.
 
@@ -82,19 +82,20 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 - **`Quote`** — Bid/Ask/Last with computed `Spread` and `SpreadPercent`.
 
 ### Clock (BCL `System.TimeProvider`)
-- **`TimeProvider`** — primary clock abstraction; `GetUtcNow()` for the instant. `TimeProvider.System` (production) or `Core.ManualTimeProvider` (`Advance`/`SetUtcNow`, deterministic) for sim/tests. Injected into `NyseMarketHoursService`.
+- **`TimeProvider`** — primary clock abstraction; `GetUtcNow()` for the instant. `TimeProvider.System` (production) or `Core.ManualTimeProvider` (`Advance`/`SetUtcNow`, deterministic) for sim/tests. Injected into `MarketContextProvider` / `MarketClock`.
 
 ### Application contracts (`src/MarketData.Application/Contracts/`)
-- **`IMarketTimingService`** — venue-aware async service: `IsTradingDayAsync`, `GetSessionAsync`, `GetHolidaysAsync`, `IsOpenAsync`, `GetCurrentStatusAsync`, `GetTodayCloseUtcAsync`.
-- **`MarketSession`** — `record(TimeOnly Open, TimeOnly Close, bool IsHalfDay)`.
-- **`MarketHoursStatus`** — `record(bool IsTradingDay, bool IsOpen, DateTimeOffset AsOfLocal, MarketSession? Session)`.
+- **`IMarketCalendar`** — pure, **clock-free**, synchronous calendar: `ClassifyDay`, `GetSessionWindow`, `GetCalendarYear`, `IsTradingDay`, `NextTradingDay`/`AddTradingDays`, `CountTradingDays`, `IsoWeekNumber`, `GetTradingDayOrdinal`, `GetPeriodStats`, `GetMonthlyExpiration`/`GetQuarterlyExpiration`/`GetWitchingDates`/`NextExpirationOnOrAfter`, `SettlementDate`.
+- **`IMarketContextProvider`** — clock-aware: `GetContext`/`GetContextAt`, `GetActivePhase`, `GetLiquidity`, `IsRegularSessionOpen`, `NextRegularOpenUtc`, `CurrentOrNextRegularCloseUtc`.
+- Records: **`MarketContext`** (single-call snapshot), **`MarketDayInfo`**, **`MarketSessionWindow`**, **`Holiday`**/`MarketHolidayCalendarYear`, **`PhaseStatus`**, **`TradingPeriodStats`**/`TradingDayOrdinal`, **`OptionsExpiration`**/`WitchingKind`. Enums + value objects (`SessionLiquidityLevel`, `MarketPhase`, `MarketDayKind`, `PhaseWindow`, `VenueSchedule`) live in `MarketData.Primitives.Sessions`.
 
 ### Application services (`src/MarketData.Application/Services/`)
-- **`MarketHoursProvider`** — synchronous façade over `IMarketTimingService` (uses `GetAwaiter().GetResult()`). Venue is hard-wired to `"NYSE"`.
+- **`MarketClock`** — synchronous façade over `IMarketContextProvider` (`IsMarketOpen`, `Liquidity`, `Context`, `NextMarketOpen`, `TodayCloseUtc`, `Classify`, `TradingDaysUntil`). No sync-over-async.
 
 ### Calendar implementations (`src/MarketData.Application/Calendar/`)
-- **`NyseMarketHoursService`** — `IMarketTimingService` for NYSE. Takes a `TimeProvider` ctor arg. Computus-based Easter/Good Friday. Holiday/half-day overrides loaded from JSON: `~/OneDrive/TradingSystem/config/holidays/holidays-{year}.json`. Falls back to built-in defaults if file missing. Throws `NotSupportedException` for non-NYSE venues.
-- **`MarketTimeZoneProvider`** — `internal static` helper; resolves Eastern Time zone cross-platform (`"Eastern Standard Time"` → `"America/New_York"` fallback).
+- **`NyseMarketCalendar`** — `IMarketCalendar` for the composite US-equity venue (`"US-EQ"`). Holiday data composed: `UsEquityHolidayRules` (Computus Good Friday + observed/nth-weekday) → `UsEquityClosures` (bundled named specials) → `HolidayOverrideLoader` (per-year JSON). Per-year cache.
+- **`MarketContextProvider`** — `IMarketContextProvider`; ctor `(IMarketCalendar, TimeProvider)`. Resolves instants → `MarketPhase`/`SessionLiquidityLevel`; DST-correct per-boundary conversion.
+- **`VenueSchedules`** — schedule factory (`UsEquityComposite()`). **`MarketTimeZoneProvider`** — `internal static`; `For(timeZoneId)` resolves Windows/IANA ids with fallback (cached).
 
 ---
 
@@ -104,9 +105,9 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 - UTC is canonical; convert to local only at display/boundary.
 - Value objects inherit from `Core.ValueObject` and override `GetEqualityComponents()`.
 - Use `init`-only properties or private setters on value objects.
-- Prefer `record` for immutable data transfer objects (`MarketSession`, `MarketHoursStatus`).
+- Prefer `record` for immutable data transfer objects (`MarketContext`, `MarketDayInfo`, `MarketSessionWindow`).
 - No `static DateTime.UtcNow` calls — always inject `System.TimeProvider` and call `GetUtcNow()`.
-- Venue identifier is always an explicit `string` parameter, never assumed or hard-coded in contracts.
+- Venue is construction-time identity (`VenueId` on the calendar/provider), not a per-call parameter; keep venue-specific assumptions out of shared logic.
 
 ---
 
@@ -118,11 +119,11 @@ All tests must remain green. Test framework is **xUnit** (no NUnit/MSTest).
 - Always cover: timezone boundaries, DST transitions, holiday/half-day edge cases for any market-hours code.
 - For clock-driven tests, inject a `Core.ManualTimeProvider` — construct it with a fixed start instant and `Advance`/`SetUtcNow` to drive the timeline deterministically.
 
-Example clock pattern (see `InfrastructureServicesTests.cs`):
+Example clock pattern (see `MarketClockTests.cs` / `MarketContextProviderTests.cs`):
 ```csharp
 var clock = new ManualTimeProvider(new DateTimeOffset(2025, 5, 19, 20, 30, 0, TimeSpan.Zero)); // 16:30 ET
-var sut = new NyseMarketHoursService(clock);
-var status = await sut.GetCurrentStatusAsync("NYSE");
+var provider = new MarketContextProvider(new NyseMarketCalendar(), clock);
+var ctx = provider.GetContext();
 ```
 
 ---
@@ -149,15 +150,15 @@ Always run `git submodule update --init --recursive` before building.
 
 ## Holiday configuration (runtime)
 
-`NyseMarketHoursService` looks for per-year JSON files at:
+`HolidayOverrideLoader` looks for per-year JSON files at:
 ```
 ~/OneDrive/TradingSystem/config/holidays/holidays-{year}.json
 ```
-Schema:
+Schema (named entries):
 ```json
 {
-  "holidays": ["2025-01-01", "2025-07-04"],
-  "halfDays": ["2025-11-28", "2025-12-24"]
+  "holidays":    [ { "date": "2025-07-06", "name": "Special Closure" } ],
+  "earlyCloses": [ { "date": "2025-07-03", "name": "Early Close" } ]
 }
 ```
-If the file is absent or unreadable, the service falls back to algorithmically computed NYSE defaults (MLK Day, Presidents' Day, Good Friday, Memorial Day, Independence Day, Labor Day, Thanksgiving, Christmas — with Saturday/Sunday observed-holiday shifting).
+Legacy bare-date arrays (`"holidays": ["2025-01-01"]`, `"halfDays": [...]`) are still accepted; names are synthesized. Overrides take precedence over computed NYSE defaults (MLK, Washington's Birthday, Good Friday, Memorial Day, Juneteenth (from 2022), Independence Day, Labor Day, Thanksgiving, Christmas — with observed-holiday shifting) and the bundled special-closure table (`UsEquityClosures`).

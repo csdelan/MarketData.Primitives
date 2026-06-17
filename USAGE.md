@@ -201,57 +201,47 @@ Main members:
 Use this instead of directly calling `DateTimeOffset.UtcNow` in strategy or market-hours logic.
 Inject `TimeProvider.System` in production and `Core.ManualTimeProvider` in simulation/tests.
 
-### `IMarketTimingService`
+### `IMarketCalendar`
 
-Use `IMarketTimingService` as the main contract for venue-aware market calendar and hours logic.
+Use `IMarketCalendar` as the main contract for **clock-free** market calendar logic. Every method
+takes explicit dates, so calendar math is fully deterministic and testable without a clock.
 
 Main capabilities:
 
-- check whether a date is a trading day
-- get a session for a specific date
-- get a venue's holiday list
-- check whether the market is open at a given UTC time
-- get the current status for a venue
-- get today's close time in UTC
+- classify a date (`ClassifyDay`) — regular day, half day, weekend, or named holiday
+- resolve a date's session windows to UTC instants (`GetSessionWindow`)
+- get a year's named holidays and early closes (`GetCalendarYear`)
+- navigate/count trading days (`NextTradingDay`, `AddTradingDays`, `CountTradingDays`, `SettlementDate`)
+- numbering and statistics (`IsoWeekNumber`, `GetTradingDayOrdinal`, `GetPeriodStats`)
+- options expiration / witching dates (`GetMonthlyExpiration`, `GetQuarterlyExpiration`, `GetWitchingDates`, `NextExpirationOnOrAfter`)
 
-This is the contract most higher-level services should depend on when they need exchange hours or holiday awareness.
+### `IMarketContextProvider`
 
-### `MarketSession`
+Use `IMarketContextProvider` for **clock-aware** queries. It wraps an `IMarketCalendar` plus an
+injected `TimeProvider` and answers "what's happening now" questions:
 
-Use `MarketSession` to represent the open and close time for one trading date.
+- `GetContext()` / `GetContextAt(instant)` — a rich `MarketContext` snapshot
+- `GetActivePhase` / `GetLiquidity` — the current `MarketPhase` and `SessionLiquidityLevel`
+- `IsRegularSessionOpen`, `NextRegularOpenUtc`, `CurrentOrNextRegularCloseUtc`
 
-Main fields:
+### `MarketContext`
 
-- `Open`
-- `Close`
-- `IsHalfDay`
+Use `MarketContext` to get everything about the current moment in one call: active phase and liquidity,
+whether the regular session is open (with elapsed/remaining/progress), per-phase status for overnight
+futures / pre-market / post-market, the next phase transition, trading-day ordinals, week/month/quarter
+end flags, the owning trading date, and the next monthly/quarterly expirations.
 
-This is the cleanest way to pass around one session window after calendar logic has been resolved.
+### `MarketDayInfo`, `MarketSessionWindow`, `Holiday`
 
-### `MarketHoursStatus`
+`MarketDayInfo` is the day classification (kind + holiday name + is-trading-day). `MarketSessionWindow`
+holds a trading date's phase boundaries as UTC instants. `Holiday` is a named full-closure or early-close
+entry; `MarketHolidayCalendarYear` groups a year's holidays and early closes.
 
-Use `MarketHoursStatus` when you need a snapshot of the current market state for a venue.
+### `MarketClock`
 
-It includes:
-
-- whether today is a trading day
-- whether the market is open
-- the local as-of time used for the evaluation
-- the current session, if one exists
-
-This is useful for dashboards, readiness checks, and scheduler-style logic.
-
-### `MarketHoursProvider`
-
-Use `MarketHoursProvider` as a synchronous facade over the market timing service when the calling code is still sync-oriented.
-
-It is most useful for:
-
-- legacy code paths
-- simple utilities that need a yes/no market-open result
-- getting the next open without directly handling async calls
-
-Prefer `IMarketTimingService` directly in new async-first code.
+Use `MarketClock` as the synchronous convenience facade over `IMarketContextProvider`
+(`IsMarketOpen`, `Liquidity`, `Context`, `NextMarketOpen`, `TodayCloseUtc`, `Classify`,
+`TradingDaysUntil`). The whole stack is synchronous — there is no sync-over-async anywhere.
 
 ### Clock implementations
 
@@ -266,37 +256,38 @@ implementations directly:
   so a whole simulated timeline is single-stepped and reproducible. Construct with a start instant
   (`new ManualTimeProvider(startUtc)`) or the parameterless ctor (fixed epoch `2000-01-01Z`).
 
-### `NyseMarketHoursService`
+### `NyseMarketCalendar`
 
-Use `NyseMarketHoursService` when you need a working implementation of `IMarketTimingService` for the NYSE.
+Use `NyseMarketCalendar` as the working `IMarketCalendar` implementation for the composite US-equity
+venue (`"US-EQ"`). Construct it (optionally with a custom `VenueSchedule` and/or `HolidayOverrideLoader`)
+and pass it to a `MarketContextProvider`.
 
 It handles:
 
-- weekends
-- standard NYSE holidays
-- configured holiday overrides
-- half-days
-- regular session hours
-- current open/closed status
-
-This is the default concrete choice when your code needs real NYSE calendar behavior.
+- weekends, observed holidays, half-days, and Computus-based Good Friday (`UsEquityHolidayRules`)
+- bundled named special closures — mourning days, Hurricane Sandy, 9/11 (`UsEquityClosures`)
+- per-year JSON holiday overrides (`HolidayOverrideLoader`)
+- the full 24h phase model: overnight futures → pre-market → regular → post-market
 
 Important notes:
 
-- venue support is currently NYSE-focused
-- session times are resolved in Eastern Time
-- `GetTodayCloseUtcAsync()` is useful when orchestration code needs a precise close timestamp in UTC
+- venue is construction-time identity (`VenueId`); add venues via a new `VenueSchedule` + rules
+- all session times are resolved in Eastern Time, DST-correct per boundary
+- overnight futures follow the NYSE (not CME) calendar — a documented simplification
 
-### `HolidayConfig`
+### Holiday overrides (`HolidayOverrideLoader`)
 
-Use `HolidayConfig` when you need to provide or persist yearly holiday and half-day overrides for the NYSE service.
+Provide per-year corrections via JSON at `~/OneDrive/TradingSystem/config/holidays/holidays-{year}.json`.
 
-It contains:
+New schema (named entries):
 
-- `Holidays`: full market-closure dates
-- `HalfDays`: shortened-session dates
+```json
+{ "holidays": [ { "date": "2025-07-06", "name": "Special Closure" } ],
+  "earlyCloses": [ { "date": "2025-07-03", "name": "Early Close" } ] }
+```
 
-This is mainly a configuration model rather than a day-to-day programming surface.
+Legacy bare-date arrays (`"holidays": ["2025-07-06"]`, `"halfDays": [...]`) are still accepted; names
+are synthesized. Overrides take precedence over computed rules and the bundled closure table.
 
 ## Typical usage patterns
 
@@ -324,13 +315,12 @@ This combination fits live pricing and time-aware workflows that do not require 
 
 Use:
 
-- `IMarketTimingService`
-- `MarketSession`
-- `MarketHoursStatus`
+- `IMarketCalendar` / `NyseMarketCalendar`
+- `IMarketContextProvider` / `MarketContextProvider`
+- `MarketClock`
 - `TimeProvider.System`
-- `NyseMarketHoursService`
 
-This combination covers market-open checks, holiday-aware scheduling, and today's close-time calculations.
+This combination covers market-open checks, holiday-aware scheduling, liquidity/phase awareness, and today's close-time calculations.
 
 ### Ratio symbol analysis
 
@@ -347,6 +337,6 @@ Typical flow: check `RatioSymbol.IsRatio(symbol)`, call `Parse` to get the typed
 Use:
 
 - `TimeProvider` (inject `Core.ManualTimeProvider` for the simulated clock)
-- `IMarketTimingService`
+- `IMarketCalendar` / `IMarketContextProvider`
 
 Write business logic against these abstractions so the same code can run against either a live clock or a simulated clock.

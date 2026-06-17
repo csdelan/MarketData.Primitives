@@ -8,15 +8,15 @@
 
 Core primitives remain focused on deterministic, reusable domain types and logic.
 
-> A separate `MarketData.Infrastructure` project was retired; its provider implementations
-> (`NyseMarketHoursService`, `MarketTimeZoneProvider`) now live in `MarketData.Application`
-> under the `MarketData.Application.Calendar` namespace.
+> A separate `MarketData.Infrastructure` project was retired; the provider implementations
+> (`NyseMarketCalendar`, `MarketContextProvider`, `MarketTimeZoneProvider`) live in
+> `MarketData.Application` under the `MarketData.Application.Calendar` namespace.
 
 ## Architecture direction (agreed)
 For market schedules/calendars/providers:
 
 1. Define service contracts in the application layer (`MarketData.Application.Contracts`).
-   - Example: `IMarketTimingService` (consolidated market calendar and hours service).
+   - Example: `IMarketCalendar` (clock-free calendar) and `IMarketContextProvider` (clock-aware context).
 2. Keep provider implementations in the application layer alongside the contracts
    (`MarketData.Application.Calendar`).
    - Exchange APIs, holiday feeds, cache, retries, persistence, system clock adapters.
@@ -54,7 +54,7 @@ When introducing calendar/hour services:
   process/runtime concerns, or environment wiring.
 
 For this repository direction:
-- `IMarketTimingService`: consolidated contract and its concrete providers both in `MarketData.Application`.
+- `IMarketCalendar` / `IMarketContextProvider`: contracts and their concrete providers both in `MarketData.Application`.
 - Clock: depend on the BCL `System.TimeProvider` directly — no MarketData-owned clock interface or implementation:
   - production wires `TimeProvider.System` at the composition root.
   - simulation/backtest/tests inject `Core.ManualTimeProvider`, still outside primitives business logic.
