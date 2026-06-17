@@ -187,17 +187,20 @@ Use these types when a workflow needs lightweight contract metadata without depe
 
 ## MarketData.Application
 
-### `ITimeKeeper`
+### `TimeProvider` (clock abstraction)
 
-Use `ITimeKeeper` anywhere business logic needs the current time. This is the primary abstraction that keeps code deterministic and simulation-friendly.
+Use the BCL `System.TimeProvider` anywhere business logic needs the current time. This is the
+primary abstraction that keeps code deterministic and simulation-friendly, standardized across
+the ecosystem by Core 2.0.
 
 Main members:
 
-- `Now`: current effective time
-- `SetTime(...)`: move time in a simulated implementation
-- `WaitTime(...)`: await a target time
+- `GetUtcNow()`: current effective UTC instant
+- `GetTimestamp()` / `GetElapsedTime(...)`: `Stopwatch`-style elapsed measurement
+- `CreateTimer(...)` (or `Task.Delay(delay, timeProvider)`): await a target time
 
-Use this instead of directly calling system time in strategy or market-hours logic.
+Use this instead of directly calling `DateTimeOffset.UtcNow` in strategy or market-hours logic.
+Inject `TimeProvider.System` in production and `Core.ManualTimeProvider` in simulation/tests.
 
 ### `IMarketTimingService`
 
@@ -253,17 +256,18 @@ Prefer `IMarketTimingService` directly in new async-first code.
 
 ## MarketData.Infrastructure
 
-### `RealTimeTimeKeeper`
+### Clock implementations
 
-Use `RealTimeTimeKeeper` when you want `ITimeKeeper` backed by the live system clock.
+There is no MarketData-specific clock type anymore — use the standard `TimeProvider`
+implementations directly:
 
-Behavior:
-
-- `Now` returns the current UTC time
-- `SetTime(...)` is not supported
-- `WaitTime(...)` delays until the requested time
-
-Use this in production or live-monitoring workflows. Use a fake or simulated implementation elsewhere when you need deterministic tests or replayable scenarios.
+- **Production / live monitoring:** `TimeProvider.System` (the live system clock; time cannot be
+  set).
+- **Tests / simulation / replay:** `Core.ManualTimeProvider` — a deterministic clock that only
+  moves when you call `Advance(span)` or `SetUtcNow(instant)`. Timers created against it (and
+  `Task.Delay(delay, provider)`) fire exactly when the clock is advanced across their due time,
+  so a whole simulated timeline is single-stepped and reproducible. Construct with a start instant
+  (`new ManualTimeProvider(startUtc)`) or the parameterless ctor (fixed epoch `2000-01-01Z`).
 
 ### `NyseMarketHoursService`
 
@@ -315,7 +319,7 @@ This combination covers loading bars, trimming a lookback, filtering to session 
 Use:
 
 - `Quote`
-- `ITimeKeeper`
+- `TimeProvider`
 
 This combination fits live pricing and time-aware workflows that do not require bar consolidation.
 
@@ -326,7 +330,7 @@ Use:
 - `IMarketTimingService`
 - `MarketSession`
 - `MarketHoursStatus`
-- `RealTimeTimeKeeper`
+- `TimeProvider.System`
 - `NyseMarketHoursService`
 
 This combination covers market-open checks, holiday-aware scheduling, and today's close-time calculations.
@@ -345,7 +349,7 @@ Typical flow: check `RatioSymbol.IsRatio(symbol)`, call `Parse` to get the typed
 
 Use:
 
-- `ITimeKeeper`
+- `TimeProvider` (inject `Core.ManualTimeProvider` for the simulated clock)
 - `IMarketTimingService`
 
 Write business logic against these abstractions so the same code can run against either a live clock or a simulated clock.

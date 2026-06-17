@@ -1,51 +1,29 @@
-using MarketData.Application.Contracts;
+using Core;
 using MarketData.Infrastructure.Calendar;
-using MarketData.Infrastructure.TimeKeeping;
 
 namespace MarketData.Primitives.Tests;
 
 public class InfrastructureServicesTests
 {
-    /*
-    [Fact]
-    public async Task NyseCalendar_ReturnsFalse_OnWeekend()
-    {
-        var sut = new NyseMarketCalendarService();
-
-        var result = await sut.IsTradingDayAsync("NYSE", new DateOnly(2025, 5, 17)); // Saturday
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task NyseCalendar_ReturnsFalse_OnObservedHoliday()
-    {
-        var sut = new NyseMarketCalendarService();
-
-        var result = await sut.IsTradingDayAsync("NYSE", new DateOnly(2027, 12, 24)); // Christmas observed
-
-        Assert.False(result);
-    }
+    // 2025-05-19 is a Monday and a regular NYSE trading day (EDT, UTC-4):
+    // 09:30 ET = 13:30 UTC (open), 16:00 ET = 20:00 UTC (close).
 
     [Fact]
     public async Task NyseHours_ReturnsOpen_WhenWithinSessionOnTradingDay()
     {
-        var timeKeeper = new FakeTimeKeeper(new DateTimeOffset(2025, 5, 19, 15, 0, 0, TimeSpan.Zero)); // 11:00 ET
-        var calendar = new NyseMarketCalendarService();
-        var sut = new NyseMarketHoursService(timeKeeper, calendar);
+        var clock = new ManualTimeProvider(new DateTimeOffset(2025, 5, 19, 15, 0, 0, TimeSpan.Zero)); // 11:00 ET
+        var sut = new NyseMarketHoursService(clock);
 
-        var isOpen = await sut.IsOpenAsync("NYSE", timeKeeper.Now);
+        var isOpen = await sut.IsOpenAsync("NYSE", clock.GetUtcNow());
 
         Assert.True(isOpen);
     }
 
     [Fact]
-    public async Task NyseHours_CurrentStatus_UsesTimeKeeperNow()
+    public async Task NyseHours_CurrentStatus_UsesInjectedClock()
     {
-        var now = new DateTimeOffset(2025, 5, 19, 20, 30, 0, TimeSpan.Zero); // 16:30 ET, after close
-        var timeKeeper = new FakeTimeKeeper(now);
-        var calendar = new NyseMarketCalendarService();
-        var sut = new NyseMarketHoursService(timeKeeper, calendar);
+        var clock = new ManualTimeProvider(new DateTimeOffset(2025, 5, 19, 20, 30, 0, TimeSpan.Zero)); // 16:30 ET, after close
+        var sut = new NyseMarketHoursService(clock);
 
         var status = await sut.GetCurrentStatusAsync("NYSE");
 
@@ -53,38 +31,15 @@ public class InfrastructureServicesTests
         Assert.False(status.IsOpen);
         Assert.NotNull(status.Session);
     }
-    */
 
     [Fact]
-    public async Task RealTimeTimeKeeper_SetTime_Throws()
+    public async Task NyseHours_TodayCloseUtc_IsFourPmEasternInUtc()
     {
-        var sut = new RealTimeTimeKeeper();
+        var clock = new ManualTimeProvider(new DateTimeOffset(2025, 5, 19, 14, 0, 0, TimeSpan.Zero)); // mid-session
+        var sut = new NyseMarketHoursService(clock);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.SetTime(DateTimeOffset.UtcNow));
-    }
+        var closeUtc = await sut.GetTodayCloseUtcAsync("NYSE");
 
-    [Fact]
-    public async Task RealTimeTimeKeeper_WaitTime_PastTime_CompletesImmediately()
-    {
-        var sut = new RealTimeTimeKeeper();
-
-        await sut.WaitTime(DateTimeOffset.UtcNow.AddMilliseconds(-1));
-    }
-
-    private sealed class FakeTimeKeeper(DateTimeOffset now) : ITimeKeeper
-    {
-        public DateTimeOffset Now { get; private set; } = now;
-
-        public Task SetTime(DateTimeOffset time)
-        {
-            Now = time;
-            return Task.CompletedTask;
-        }
-
-        public Task WaitTime(DateTimeOffset time)
-        {
-            Now = time;
-            return Task.CompletedTask;
-        }
+        Assert.Equal(new DateTimeOffset(2025, 5, 19, 20, 0, 0, TimeSpan.Zero), closeUtc); // 16:00 ET = 20:00 UTC (EDT)
     }
 }

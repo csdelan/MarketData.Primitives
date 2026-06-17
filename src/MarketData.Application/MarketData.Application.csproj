@@ -22,5 +22,8 @@
 	<None Include="..\..\CLAUDE.md" Link="CLAUDE.md" Pack="true" PackagePath="" />
 	<None Include="..\..\USAGE.md" Link="USAGE.md" CopyToPublishDirectory="Always" Pack="true" PackagePath="" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Core" Version="2.0.0" />
+  </ItemGroup>
 
 </Project>

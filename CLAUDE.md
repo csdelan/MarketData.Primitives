@@ -50,7 +50,7 @@ MarketData.Infrastructure  ← Implementations: NYSE calendar, real-time clock, 
 
 ### Key Application Contracts
 
-- **`ITimeKeeper`** — primary clock abstraction; all business logic uses this instead of `DateTime.UtcNow`. Supports `SetTime`/`WaitTime` for simulation/backtest.
+- **`System.TimeProvider`** — primary clock abstraction (from Core 2.0's ecosystem standard); all business logic depends on this instead of `DateTime.UtcNow`. `GetUtcNow()` for the instant; `TimeProvider.System` in production, `Core.ManualTimeProvider` (`Advance`/`SetUtcNow`) for simulation/backtest. (Replaces the removed `ITimeKeeper`/`RealTimeTimeKeeper`/`SimulatedTimeKeeper`.)
 - **`IMarketTimingService`** — venue-aware market hours: `IsOpenAsync`, `GetSessionAsync`, `GetHolidaysAsync`, `GetTodayCloseUtcAsync`, `GetCurrentStatusAsync`.
 - **`MarketHoursProvider`** — synchronous facade over `IMarketTimingService` (uses `GetAwaiter().GetResult()`).
 - **`MarketSession`** / **`MarketHoursStatus`** — immutable records for session windows and current status.
@@ -59,7 +59,7 @@ MarketData.Infrastructure  ← Implementations: NYSE calendar, real-time clock, 
 
 - `NyseMarketHoursService` — NYSE calendar with Computus-based Easter/Good Friday, observed holidays, and half-days.
 - Holiday/half-day overrides loaded from JSON: `~/OneDrive/TradingSystem/config/holidays/{year}.json`
-- `RealTimeTimeKeeper` — live system clock implementation of `ITimeKeeper`
+- Clock — inject `System.TimeProvider`: `TimeProvider.System` (live) or `Core.ManualTimeProvider` (deterministic). No MarketData-owned clock type.
 - `MarketTimeZoneProvider` — Eastern Time resolution utility
 
 ### Ratio Symbol Conventions
@@ -75,11 +75,11 @@ MarketData.Infrastructure  ← Implementations: NYSE calendar, real-time clock, 
 ## Key Patterns and Constraints
 
 - **`DateTimeOffset` over `DateTime`** throughout. `DateOnly`/`TimeOnly` for date/time-only semantics. UTC canonical; convert to local only at boundaries.
-- **No `DateTime.UtcNow` in business logic** — always inject `ITimeKeeper`.
+- **No `DateTime.UtcNow` in business logic** — always inject `System.TimeProvider` and call `GetUtcNow()`.
 - **Venue as explicit string parameter** (e.g., `"NYSE"`) in all service APIs — do not hard-code assumptions.
 - **`CandleSeries` performance** — uses `ArrayPool<T>` and lazy-cached `ReadOnlySpan<T>` price arrays; mutations invalidate the cache.
 - **Value objects** inherit from `Core.ValueObject`; prefer `init`-only or private setters.
-- **Test doubles** — `FakeTimeKeeper` in tests; prefix fake/stub implementations with `Fake`.
+- **Test doubles** — use `Core.ManualTimeProvider` for the clock; prefix any other fake/stub implementations with `Fake`.
 
 ## Test Conventions
 
