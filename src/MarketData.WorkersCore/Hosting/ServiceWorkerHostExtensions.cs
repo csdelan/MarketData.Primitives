@@ -4,8 +4,10 @@ using Core.Persistence;
 using MarketData.Application.Calendar;
 using MarketData.Application.Contracts;
 using MarketData.Application.Services;
+using MeshTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace MarketData.Workers;
 
@@ -49,13 +51,35 @@ public static class ServiceWorkerHostExtensions
 
         services.AddServiceWorkerHangfire(hangfireOptions);
 
-        // Hosted services: market-aware scheduler (also exposes IMarketScheduler) + heartbeat.
+        // Hosted services: market-aware scheduler (also exposes IMarketScheduler).
         services.AddSingleton<MarketScheduler>();
         services.AddSingleton<IMarketScheduler>(sp => sp.GetRequiredService<MarketScheduler>());
         services.AddHostedService(sp => sp.GetRequiredService<MarketScheduler>());
-        services.AddHostedService<HeartbeatService>();
+
+        // Liveness: broadcast the MeshTransit heartbeat, with status + a compact job-activity
+        // digest pulled from JobRunRegistry on every tick. This is the common uptime signal a
+        // central monitor watches across the fleet.
+        AddHeartbeat(services);
 
         return services;
+    }
+
+    private static void AddHeartbeat(IServiceCollection services)
+    {
+        services.AddMeshTransitHeartbeat(_ => { });
+
+        // Bind the heartbeat to this host's identity/config and drive its status + metadata from
+        // live job state. Resolved with DI access so it can close over the JobRunRegistry singleton.
+        services.AddOptions<HeartbeatOptions>()
+            .Configure<IOptions<ServiceWorkerOptions>, JobRunRegistry>((heartbeat, workerOptions, registry) =>
+            {
+                var options = workerOptions.Value;
+                heartbeat.ServiceName = options.ServiceName;
+                heartbeat.EventEndpoint = options.Heartbeat.EventEndpoint;
+                heartbeat.HeartbeatIntervalMs = options.Heartbeat.IntervalMs;
+                heartbeat.HealthSource = () => JobActivityHeartbeat.DeriveStatus(registry);
+                heartbeat.MetadataProvider = metadata => JobActivityHeartbeat.PopulateMetadata(metadata, registry);
+            });
     }
 
     private static HangfireOptions AddOptions(IServiceCollection services, IConfiguration configuration)

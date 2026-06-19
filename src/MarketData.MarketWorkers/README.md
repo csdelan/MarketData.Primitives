@@ -35,7 +35,9 @@ On startup you will see:
 
 - Serilog console output showing the Hangfire server and each schedule's computed next-fire time.
 - `hello-world` firing every 15 seconds (Cron trigger); `fetch-todo` firing every minute (IntervalAlways).
-- `JobStarted` / `JobFinished` events and a periodic `Heartbeat` summary in the log.
+- `JobStarted` / `JobFinished` events in the log.
+- A MeshTransit liveness heartbeat broadcast on `tcp://*:9101`, carrying status and a compact
+  per-job activity digest (consumed by a central monitor via MeshTransit's `HeartbeatWatcher`).
 - JSON files written to `data/todos/` after each `fetch-todo` run.
 
 **Hangfire dashboard:** `http://localhost:5099/hangfire`
@@ -50,9 +52,10 @@ On startup you will see:
 |-----|---------|-------------|
 | `ServiceName` | `MarketData.ServiceWorkers` | Stamped onto events and heartbeats |
 | `VenueId` | `US-EQ` | Exchange calendar used for market-relative schedules |
-| `HeartbeatInterval` | `00:01:00` | How often the heartbeat event fires |
 | `DashboardPath` | `/hangfire` | URL path for the Hangfire UI |
 | `ExposeHangfireDashboard` | `true` | Set `false` on worker-only instances sharing a central dashboard |
+| `Heartbeat:EventEndpoint` | `tcp://*:9101` | PUB socket the MeshTransit liveness heartbeat binds (unique per process) |
+| `Heartbeat:IntervalMs` | `5000` | Heartbeat cadence; death detected after ~`IntervalMs × missTolerance` |
 
 ### `Schedules`
 

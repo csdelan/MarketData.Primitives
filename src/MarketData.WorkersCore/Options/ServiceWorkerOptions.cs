@@ -18,8 +18,11 @@ public sealed class ServiceWorkerOptions
     [Required]
     public string VenueId { get; set; } = "US-EQ";
 
-    /// <summary>How often the heartbeat service publishes a summary event.</summary>
-    public TimeSpan HeartbeatInterval { get; set; } = TimeSpan.FromMinutes(1);
+    /// <summary>
+    /// MeshTransit liveness-heartbeat settings. The host advertises uptime/health on the mesh
+    /// via these; see <see cref="HeartbeatSettings"/>.
+    /// </summary>
+    public HeartbeatSettings Heartbeat { get; set; } = new();
 
     /// <summary>Path the Hangfire dashboard is mounted at.</summary>
     public string DashboardPath { get; set; } = "/hangfire";
@@ -31,4 +34,26 @@ public sealed class ServiceWorkerOptions
     /// app) as the single entry point.
     /// </summary>
     public bool ExposeHangfireDashboard { get; set; } = true;
+}
+
+/// <summary>
+/// Settings for the MeshTransit liveness heartbeat this host broadcasts. The heartbeat is a
+/// machine-readable uptime/health signal (instance id, sequence, status, uptime) on the reserved
+/// <c>_mt.heartbeat.&lt;service&gt;</c> topic — distinct from the domain job-lifecycle events emitted
+/// through <c>IEventPublisher</c>. A central monitor consumes these via MeshTransit's
+/// <c>HeartbeatWatcher</c>.
+/// </summary>
+public sealed class HeartbeatSettings
+{
+    /// <summary>
+    /// PUB socket bind address this process broadcasts heartbeats on, e.g. <c>tcp://*:9101</c>.
+    /// Must be unique per process on a host.
+    /// </summary>
+    public string EventEndpoint { get; set; } = "tcp://*:9101";
+
+    /// <summary>
+    /// Heartbeat cadence in milliseconds (default 5000). Death is detected by the watcher after
+    /// roughly <c>IntervalMs × missTolerance</c>.
+    /// </summary>
+    public int IntervalMs { get; set; } = 5000;
 }
