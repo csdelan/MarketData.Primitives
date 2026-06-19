@@ -1,4 +1,5 @@
 using Core;
+using Core.BackgroundJobs;
 
 namespace MarketData.Workers;
 

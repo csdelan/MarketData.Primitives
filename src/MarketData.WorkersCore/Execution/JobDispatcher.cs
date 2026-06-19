@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Core;
+using Core.BackgroundJobs;
 using Core.Json;
 using Hangfire;
 using Microsoft.Extensions.Logging;

@@ -1,4 +1,5 @@
 using Core;
+using Core.BackgroundJobs;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MarketData.Workers;

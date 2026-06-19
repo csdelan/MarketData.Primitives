@@ -1,4 +1,5 @@
 using Core;
+using Core.BackgroundJobs;
 using Core.Persistence;
 using MarketData.Application.Calendar;
 using MarketData.Application.Contracts;
