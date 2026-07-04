@@ -25,7 +25,10 @@ public static class HangfireSetup
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()
             .UseRecommendedSerializerSettings()
-            .UseSQLiteStorage(options.DbPath));
+            .UseSQLiteStorage(options.DbPath, new SQLiteStorageOptions
+            {
+                QueuePollInterval = TimeSpan.FromMilliseconds(options.QueuePollIntervalMs),
+            }));
 
         services.AddHangfireServer();
         return services;

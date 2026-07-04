@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release</Configurations>
-    <VersionPrefix>2.2.0</VersionPrefix>
+    <VersionPrefix>2.3.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Description>Reusable service-worker host infrastructure: market-aware scheduling, Hangfire wiring, job dispatch/eventing/heartbeats, options, and time-series document base. Hosts add jobs on top.</Description>
     <!-- Pinned so Hangfire's stored job records remain valid if the project file is renamed. -->
