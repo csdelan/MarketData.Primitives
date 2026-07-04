@@ -60,7 +60,12 @@ framework reference so the hosting/DI/options extensions and Hangfire APIs resol
   are backtest-drivable under `Core.ManualTimeProvider`.
 - **Hangfire** (in-memory storage, `Hosting/HangfireSetup`) is the durable executor + dashboard;
   eventing via `Eventing/IEventPublisher` + `SerilogEventPublisher` emitting `Core.BaseEvent`
-  (service name in `Context`); `Heartbeat/HeartbeatService` publishes a periodic job-activity summary.
+  (service name in `Context`).
+- **Liveness:** the host broadcasts a MeshTransit heartbeat (`AddMeshTransitHeartbeat`, configured in
+  `ServiceWorkerHostExtensions`) as the fleet-wide uptime/health signal. `Heartbeat/JobActivityHeartbeat`
+  projects `JobRunRegistry` onto the heartbeat's per-tick `HealthSource` (Healthy/Degraded) and
+  `MetadataProvider` (compact per-job digest). A central monitor consumes these via MeshTransit's
+  `HeartbeatWatcher`. This replaced the former bespoke `HeartbeatService`/`WorkerEvents.Heartbeat`.
 - **Persistence:** `Documents/TimeSeriesDocument` (`Core.IDocument` base) for concrete time-series docs.
 - **Composition seam:** generic infra wires through
   `Hosting/ServiceWorkerHostExtensions.AddServiceWorkerCore` (knows no specific jobs); hosts register

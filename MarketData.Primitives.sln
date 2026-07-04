@@ -23,6 +23,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{A1A74A5B-3853-4564-A305-501058FF0ABC}"
 	ProjectSection(SolutionItems) = preProject
 		scripts\Publish-Nuget.ps1 = scripts\Publish-Nuget.ps1
+		scripts\Deploy-MarketWorkers.ps1 = scripts\Deploy-MarketWorkers.ps1
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketData.MarketWorkers", "src\MarketData.MarketWorkers\MarketData.MarketWorkers.csproj", "{BC7B5D56-B30F-4282-A3E2-B8F840DBB00D}"

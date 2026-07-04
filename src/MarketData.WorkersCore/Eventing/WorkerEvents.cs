@@ -1,4 +1,5 @@
 using Core;
+using Core.BackgroundJobs;
 
 namespace MarketData.Workers;
 
@@ -10,7 +11,6 @@ namespace MarketData.Workers;
 public static class WorkerEvents
 {
     public const string JobClass = "BackgroundJob";
-    public const string HeartbeatClass = "Worker";
 
     public static BaseEvent JobStarted(string serviceName, string jobKey, string jobId) => new()
     {
@@ -39,16 +39,5 @@ public static class WorkerEvents
         Body = result.Succeeded
             ? $"job={result.JobKey} id={result.JobId} durationMs={result.Duration.TotalMilliseconds:F0}"
             : $"job={result.JobKey} id={result.JobId} durationMs={result.Duration.TotalMilliseconds:F0} error={result.Error}",
-    };
-
-    public static BaseEvent Heartbeat(string serviceName, string summary) => new()
-    {
-        Name = $"{serviceName} heartbeat",
-        Class = HeartbeatClass,
-        Subclass = "Heartbeat",
-        Context = serviceName,
-        Priority = 5,
-        EventStatus = EventStatus.Completed,
-        Body = summary,
     };
 }

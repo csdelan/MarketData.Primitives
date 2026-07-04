@@ -25,6 +25,7 @@
   <ItemGroup>
     <PackageReference Include="Core" Version="2.1.0" />
     <PackageReference Include="Core.Persistence" Version="2.0.0" />
+    <PackageReference Include="MeshTransit" Version="0.1.0" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
     <PackageReference Include="Hangfire.Storage.SQLite" Version="0.4.1" />
   </ItemGroup>

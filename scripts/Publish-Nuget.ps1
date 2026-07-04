@@ -14,6 +14,7 @@ $artifactsPath = Join-Path $repoRoot "artifacts\nuget"
 $projects = @(
     Join-Path $repoRoot "src\MarketData.Primitives\MarketData.Primitives.csproj"
     Join-Path $repoRoot "src\MarketData.Application\MarketData.Application.csproj"
+    Join-Path $repoRoot "src\MarketData.WorkersCore\MarketData.WorkersCore.csproj"
 )
 
 if (-not (Test-Path -LiteralPath $solutionPath)) {

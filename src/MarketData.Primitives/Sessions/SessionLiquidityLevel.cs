@@ -9,11 +9,11 @@ public enum SessionLiquidityLevel
     /// <summary>Markets are closed; no phase is active.</summary>
     None = 0,
 
-    /// <summary>Very light overnight-futures volume.</summary>
-    Light,
-
     /// <summary>Reduced volume typical of the pre-market and post-market sessions.</summary>
     Reduced,
+
+    /// <summary>Very light overnight-futures volume.</summary>
+    Light,
 
     /// <summary>The full regular session is open.</summary>
     Full
