@@ -12,7 +12,7 @@ public sealed class ServiceWorkerOptions
 
     /// <summary>Logical name of this worker host; stamped onto events and heartbeats.</summary>
     [Required]
-    public string ServiceName { get; set; } = "MarketData.ServiceWorkers";
+    public string ServiceName { get; set; } = "MarketData.MarketWorkers";
 
     /// <summary>Venue whose calendar drives market-relative schedules (e.g. <c>US-EQ</c>).</summary>
     [Required]

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Core;
 
-namespace MarketData.ServiceWorkers.Jobs;
+namespace MarketData.MarketWorkers.Jobs;
 
 /// <summary>
 /// A single to-do item from jsonplaceholder.typicode.com, stored as an <see cref="IDocument"/>

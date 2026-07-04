@@ -1,7 +1,7 @@
 using Core;
 using Microsoft.Extensions.Logging;
 
-namespace MarketData.ServiceWorkers.Jobs;
+namespace MarketData.MarketWorkers.Jobs;
 
 /// <summary>
 /// Minimal sample job: emits a structured "hello" log line. Demonstrates the simplest possible

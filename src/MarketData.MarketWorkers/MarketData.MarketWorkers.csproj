@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -8,7 +8,7 @@
     <VersionPrefix>2.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Description>Service-worker host template: bundles scheduled market-data background jobs on top of MarketData.Workers.</Description>
-    <UserSecretsId>marketdata-serviceworkers</UserSecretsId>
+    <UserSecretsId>marketdata-marketworkers</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <Folder Include="data\" />
+    <Folder Include="logs\" />
   </ItemGroup>
 
 </Project>

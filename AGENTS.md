@@ -5,16 +5,17 @@
 - `MarketData.Primitives` (domain primitives)
 - `MarketData.Application` (service contracts/use-case-facing abstractions **and** their
   concrete provider implementations)
-- `MarketData.Workers` (reusable worker-host infrastructure: market-aware scheduling, Hangfire
+- `MarketData.WorkersCore` (reusable worker-host infrastructure: market-aware scheduling, Hangfire
   wiring, job dispatch/eventing/heartbeats, options, time-series document base; references
-  `MarketData.Application`; namespace `MarketData.Workers`.)
-- `MarketData.ServiceWorkers` (host template: a runnable `Sdk.Web` host that bundles
-  `Core.IBackgroundJob` jobs + config on top of `MarketData.Workers`. Intended to be converted into a
-  project template — see the "MarketData.Workers" / "MarketData.ServiceWorkers" sections of `CLAUDE.md`.)
+  `MarketData.Application`; assembly/namespace `MarketData.Workers`, pinned via `<AssemblyName>` so
+  Hangfire's stored job records survive the project rename.)
+- `MarketData.MarketWorkers` (host template: a runnable `Sdk.Web` host that bundles
+  `Core.IBackgroundJob` jobs + config on top of `MarketData.WorkersCore`. Intended to be converted into a
+  project template — see the "MarketData.WorkersCore" / "MarketData.MarketWorkers" sections of `CLAUDE.md`.)
 
 Core primitives remain focused on deterministic, reusable domain types and logic. Reusable worker
-infrastructure belongs in `MarketData.Workers`; only job implementations + composition belong in
-`MarketData.ServiceWorkers` (or another host). Never push these runtime concerns into the lower layers.
+infrastructure belongs in `MarketData.WorkersCore`; only job implementations + composition belong in
+`MarketData.MarketWorkers` (or another host). Never push these runtime concerns into the lower layers.
 
 > A separate `MarketData.Infrastructure` project was retired; the provider implementations
 > (`NyseMarketCalendar`, `MarketContextProvider`, `MarketTimeZoneProvider`) live in

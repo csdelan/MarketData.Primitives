@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using Core.Json;
 
-namespace MarketData.ServiceWorkers.Jobs;
+namespace MarketData.MarketWorkers.Jobs;
 
 /// <summary>
 /// Typed client for the jsonplaceholder todos endpoint. Registered via

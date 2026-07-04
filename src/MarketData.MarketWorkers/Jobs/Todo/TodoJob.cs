@@ -1,7 +1,7 @@
 using Core;
 using Microsoft.Extensions.Logging;
 
-namespace MarketData.ServiceWorkers.Jobs;
+namespace MarketData.MarketWorkers.Jobs;
 
 /// <summary>
 /// Sample worker job: fetches a to-do item from jsonplaceholder and saves it to the document

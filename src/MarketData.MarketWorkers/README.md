@@ -42,7 +42,7 @@ On startup you will see:
 
 **Hangfire dashboard:** `http://localhost:5099/hangfire`
 
-**Manual job trigger (dev):** `POST http://localhost:5099/run/{jobKey}`
+**Manual job trigger (dev only):** `POST http://localhost:5099/run/{jobKey}` (mapped only when `ASPNETCORE_ENVIRONMENT=Development`)
 
 ## Configuration
 
@@ -50,7 +50,7 @@ On startup you will see:
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `ServiceName` | `MarketData.ServiceWorkers` | Stamped onto events and heartbeats |
+| `ServiceName` | `MarketData.MarketWorkers` | Stamped onto events and heartbeats |
 | `VenueId` | `US-EQ` | Exchange calendar used for market-relative schedules |
 | `DashboardPath` | `/hangfire` | URL path for the Hangfire UI |
 | `ExposeHangfireDashboard` | `true` | Set `false` on worker-only instances sharing a central dashboard |
@@ -215,4 +215,22 @@ db["todos"].find().pretty()
   dotnet user-secrets set "Persistence:Mongo:ConnectionString" "mongodb://..."
   ```
 
-  The `UserSecretsId` (`marketdata-serviceworkers`) is already set in the project file.
+  The `UserSecretsId` (`marketdata-marketworkers`) is already set in the project file.
+
+## Before using this as a template
+
+A few things are intentionally left as bare-bones placeholders. Replace them when you clone this
+project for a new host:
+
+- **Hangfire dashboard authorization** — `AllowAllDashboardAuthorizationFilter`
+  (`MarketData.WorkersCore/Hosting/HangfireSetup.cs`) permits every request. Swap in a real
+  authorization filter before exposing `/hangfire` outside a trusted network.
+- **`POST /run/{jobKey}`** is only mapped when `ASPNETCORE_ENVIRONMENT=Development`; it has no
+  authentication, so keep it that way (or add auth) if you need it in other environments.
+- **`SerilogEventPublisher`** just logs `JobStarted`/`JobFinished` events. Replace it behind
+  `IEventPublisher` with a real transport (queue, ZMQ, etc.) if another service needs to consume them.
+- **Everything under `Jobs/`** (`HelloWorldJob`, `TodoJob`/`TodoClient`/`TodoItem`) is sample
+  content demonstrating the available seams — delete it and add your own jobs per
+  **Adding a new job** above.
+- Rename `ServiceName` (`appsettings.json`), `UserSecretsId` (`.csproj`), and the
+  `Heartbeat:EventEndpoint` port to be unique per new host.

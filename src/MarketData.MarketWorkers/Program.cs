@@ -1,6 +1,6 @@
 using Hangfire;
 using MarketData.Workers;
-using MarketData.ServiceWorkers.Jobs;
+using MarketData.MarketWorkers.Jobs;
 using Microsoft.Extensions.Options;
 using Serilog;
 
@@ -39,12 +39,17 @@ try
         });
     }
 
-    // Dev convenience: manually enqueue a job by key without waiting for its schedule.
-    app.MapPost("/run/{jobKey}", (string jobKey, IBackgroundJobClient jobs) =>
+    // Dev convenience: manually enqueue a job by key without waiting for its schedule. Only mapped
+    // in Development so a deployed clone of this template doesn't ship an unauthenticated way to
+    // trigger arbitrary registered jobs in production.
+    if (app.Environment.IsDevelopment())
     {
-        var id = jobs.Enqueue<JobDispatcher>(d => d.RunAsync(jobKey, null));
-        return Results.Accepted($"/hangfire/jobs/details/{id}", new { jobKey, hangfireJobId = id });
-    });
+        app.MapPost("/run/{jobKey}", (string jobKey, IBackgroundJobClient jobs) =>
+        {
+            var id = jobs.Enqueue<JobDispatcher>(d => d.RunAsync(jobKey, null));
+            return Results.Accepted($"/hangfire/jobs/details/{id}", new { jobKey, hangfireJobId = id });
+        });
+    }
 
     app.MapGet("/", () => Results.Ok(new
     {
@@ -54,10 +59,14 @@ try
 
     Log.Information("Starting {ServiceName}", workerOptions.ServiceName);
     app.Run();
+    return 0;
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "Service worker host terminated unexpectedly");
+    // Non-zero exit so process supervisors (systemd, Windows service manager, container
+    // orchestrators) see the failure instead of a clean-looking exit code 0.
+    return 1;
 }
 finally
 {

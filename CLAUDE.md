@@ -32,22 +32,25 @@ Two-layer separation — do not collapse layers:
 MarketData.Primitives    ← Domain: value objects, enums, collections (depends only on Core)
 MarketData.Application    ← Contracts + implementations: service interfaces, domain models,
                             NYSE calendar/session logic, JSON holiday config
-MarketData.Workers        ← Reusable worker-host infrastructure: market-aware scheduling, Hangfire
+MarketData.WorkersCore    ← Reusable worker-host infrastructure: market-aware scheduling, Hangfire
                             wiring, job dispatch/eventing/heartbeats, options, time-series doc base
-                            (depends on Application; namespace MarketData.Workers)
-MarketData.ServiceWorkers ← Host template: bundles job implementations + config on top of
-                            MarketData.Workers (the only project a new worker clone re-creates)
+                            (depends on Application; assembly/namespace MarketData.Workers, pinned
+                            via <AssemblyName> so Hangfire's stored job records survive the rename)
+MarketData.MarketWorkers  ← Host template: bundles job implementations + config on top of
+                            MarketData.WorkersCore (the only project a new worker clone re-creates)
 ```
 
 > The former `MarketData.Infrastructure` project was retired and the calendar/session
 > implementations (`NyseMarketCalendar`, `MarketContextProvider`, `MarketTimeZoneProvider`)
 > live in `MarketData.Application` under the `MarketData.Application.Calendar` namespace.
 
-### MarketData.Workers (reusable host infrastructure)
+### MarketData.WorkersCore (reusable host infrastructure)
 
-Class library (`src/MarketData.Workers`, namespace `MarketData.Workers`) holding everything a
-service-worker host needs that does **not** vary per project. It uses a `Microsoft.AspNetCore.App`
-framework reference so the hosting/DI/options extensions and Hangfire APIs resolve cleanly.
+Class library (`src/MarketData.WorkersCore`, assembly/namespace `MarketData.Workers` — pinned via
+`<AssemblyName>` so Hangfire's stored job type names remain valid across the project rename) holding
+everything a service-worker host needs that does **not** vary per project. It uses a
+`Microsoft.AspNetCore.App` framework reference so the hosting/DI/options extensions and Hangfire
+APIs resolve cleanly.
 
 - **Dispatch (`Execution/`):** `Core.BackgroundJobExecutor` resolves/runs jobs by `Key`;
   `JobDispatcher` (the Hangfire target) wraps it to publish start/finish events, capture a
@@ -58,7 +61,8 @@ framework reference so the hosting/DI/options extensions and Hangfire APIs resol
   Hangfire. Triggers (`ScheduleTrigger`): `IntervalAlways`, `MarketOpen`, `MarketClose`,
   `EveryNMinutesDuringMarketHours` (the "5m candle"), `Cron`. Waits use `TimeProvider`, so schedules
   are backtest-drivable under `Core.ManualTimeProvider`.
-- **Hangfire** (in-memory storage, `Hosting/HangfireSetup`) is the durable executor + dashboard;
+- **Hangfire** (SQLite-backed persistent storage shared across every worker process on a machine,
+  `Hosting/HangfireSetup`) is the durable executor + dashboard;
   eventing via `Eventing/IEventPublisher` + `SerilogEventPublisher` emitting `Core.BaseEvent`
   (service name in `Context`).
 - **Liveness:** the host broadcasts a MeshTransit heartbeat (`AddMeshTransitHeartbeat`, configured in
@@ -71,18 +75,18 @@ framework reference so the hosting/DI/options extensions and Hangfire APIs resol
   `Hosting/ServiceWorkerHostExtensions.AddServiceWorkerCore` (knows no specific jobs); hosts register
   their jobs via `JobRegistrationExtensions.AddBackgroundJob<TJob>`.
 
-### MarketData.ServiceWorkers (host template)
+### MarketData.MarketWorkers (host template)
 
-A runnable `Microsoft.NET.Sdk.Web` host (`src/MarketData.ServiceWorkers`) intended to be cloned into
+A runnable `Microsoft.NET.Sdk.Web` host (`src/MarketData.MarketWorkers`) intended to be cloned into
 a project template. It contains **only** what varies per project: `Program.cs` + `appsettings*.json`
-(composition root) and `Jobs/` (namespace `MarketData.ServiceWorkers.Jobs`). All boilerplate comes
-from the referenced `MarketData.Workers` library.
+(composition root) and `Jobs/` (namespace `MarketData.MarketWorkers.Jobs`). All boilerplate comes
+from the referenced `MarketData.WorkersCore` library.
 
 - Each host registers its jobs in `Jobs/JobRegistration.AddWorkerJobs` (typed HTTP clients via
   `IHttpClientFactory` + `Microsoft.Extensions.Http.Resilience`, document stores, options).
   `Program.cs` calls `AddServiceWorkerCore(config).AddWorkerJobs(config)`, maps the Hangfire
   dashboard at `/hangfire`, and exposes a dev-only `POST /run/{jobKey}` to enqueue on demand.
-- Sample jobs: `HelloWorldJob` (interval) and `ExchangeRatesJob` (Treasury API → file DB).
+- Sample jobs: `HelloWorldJob` (interval) and `TodoJob` (jsonplaceholder API → JSON/Mongo document store).
   **Everything under `Jobs/` is a placeholder** — replace per host.
 
 **External dependencies:** see `DEPENDENCIES.md` for published dependency paths and upstream usage notes. In particular, `Core.dll` is resolved from `$(BlueSkiesOutput)` and its published `README.md` should be read before making Core-dependent changes.

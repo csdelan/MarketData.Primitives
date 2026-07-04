@@ -3,7 +3,7 @@ using MarketData.Workers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MarketData.ServiceWorkers.Jobs;
+namespace MarketData.MarketWorkers.Jobs;
 
 /// <summary>
 /// Registers this host's jobs and their job-specific dependencies (HTTP clients, document stores).
