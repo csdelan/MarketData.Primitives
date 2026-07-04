@@ -1,4 +1,4 @@
-using Core.BackgroundJobs;
+using Core;
 using MeshTransit.Contracts;
 
 namespace MarketData.Workers;

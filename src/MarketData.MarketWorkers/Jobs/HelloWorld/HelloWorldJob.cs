@@ -1,5 +1,4 @@
 using Core;
-using Core.BackgroundJobs;
 using Microsoft.Extensions.Logging;
 
 namespace MarketData.ServiceWorkers.Jobs;
