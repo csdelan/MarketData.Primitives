@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <!-- Job-specific dependencies (these vary per host project). -->
-    <PackageReference Include="Core" Version="2.0.0" />
+    <PackageReference Include="Core" Version="2.1.0" />
     <PackageReference Include="Core.Persistence" Version="2.0.0" />
 
     <!-- IHttpClientFactory resilience (Polly v8 standard handler) for typed job clients. -->
