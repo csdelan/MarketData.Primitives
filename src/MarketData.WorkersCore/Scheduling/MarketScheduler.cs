@@ -111,11 +111,11 @@ public sealed class MarketScheduler : BackgroundService, IMarketScheduler
     /// <inheritdoc />
     public DateTimeOffset ComputeNextFire(JobSchedule schedule, DateTimeOffset fromUtc) => schedule.Trigger switch
     {
-        ScheduleTrigger.IntervalAlways => fromUtc + TimeSpan.FromMinutes(schedule.IntervalMinutes),
+        ScheduleTrigger.IntervalAlways => GridCeiling(fromUtc, schedule.IntervalMinutes, inclusive: false),
         ScheduleTrigger.MarketOpen => _clock.NextMarketOpen(),
         ScheduleTrigger.MarketClose => _provider.CurrentOrNextRegularCloseUtc(fromUtc) ?? _clock.NextMarketOpen(),
         ScheduleTrigger.EveryNMinutesDuringMarketHours => NextMarketGridFire(fromUtc, schedule.IntervalMinutes),
-        _ => fromUtc + TimeSpan.FromMinutes(schedule.IntervalMinutes),
+        _ => GridCeiling(fromUtc, schedule.IntervalMinutes, inclusive: false),
     };
 
     /// <summary>Next N-minute grid boundary that falls inside a regular session.</summary>
