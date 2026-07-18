@@ -9,14 +9,17 @@ Packages published from this repository to the local NuGet feed.
 
 | Package ID | Project | Current Version |
 | --- | --- | --- |
-| MarketData.WorkersCore | src/MarketData.WorkersCore/MarketData.WorkersCore.csproj | 2.3.0 |
-| MarketData.Primitives | src/MarketData.Primitives/MarketData.Primitives.csproj | 2.3.0 |
-| MarketData.Application | src/MarketData.Application/MarketData.Application.csproj | 2.3.0 |
+| MarketData.WorkersCore | src/MarketData.WorkersCore/MarketData.WorkersCore.csproj | 2.4.0 |
+| MarketData.Primitives | src/MarketData.Primitives/MarketData.Primitives.csproj | 2.4.0 |
+| MarketData.Application | src/MarketData.Application/MarketData.Application.csproj | 2.4.0 |
 
 ## Version History
 
 | Date | Package | Version | Notes |
 | --- | --- | --- | --- |
+| 2026-07-17 | MarketData.WorkersCore | 2.4.0 | Resolve SQLite security advisory: upgrade Hangfire.Storage.SQLite 0.4.1->0.4.3 and Hangfire.AspNetCore 1.8.23->1.8.24, add explicit SQLitePCLRaw.lib.e_sqlite3 2.1.12, and rebuild against Core 2.2.0. |
+| 2026-07-17 | MarketData.Application | 2.4.0 | Version-lockstep bump to keep pace with MarketData.Primitives 2.4.0 and MarketData.WorkersCore 2.4.0 (GitVersion global /p:Version override leaks into ProjectReference-derived dependency versions during a pack, so this chain moves together). |
+| 2026-07-17 | MarketData.Primitives | 2.4.0 | Version-lockstep bump to keep pace with MarketData.WorkersCore 2.4.0 (GitVersion global /p:Version override leaks into ProjectReference-derived dependency versions during that pack, so this chain moves together). |
 | 2026-07-04 | MarketData.Application | 2.3.0 | Version-lockstep bump to keep pace with MarketData.Primitives 2.3.0 and MarketData.WorkersCore 2.3.0 (GitVersion global /p:Version override during a pack leaks into ProjectReference-derived dependency versions, so this chain moves together). |
 | 2026-07-04 | MarketData.Primitives | 2.3.0 | Version-lockstep bump to keep pace with MarketData.WorkersCore 2.3.0 (GitVersion global /p:Version override leaked into this project dependency version during that pack). |
 | 2026-07-04 | MarketData.WorkersCore | 2.3.0 | Hangfire SQLite queue poll interval now configurable via HangfireOptions.QueuePollIntervalMs (default 250ms, was the library default 15s) so manually-enqueued jobs are picked up quickly instead of averaging ~7.5s latency. |
