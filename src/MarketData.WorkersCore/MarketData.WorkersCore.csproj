@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release</Configurations>
-    <VersionPrefix>2.4.0</VersionPrefix>
+    <VersionPrefix>2.5.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Description>Reusable service-worker host infrastructure: market-aware scheduling, Hangfire wiring, job dispatch/eventing/heartbeats, options, and time-series document base. Hosts add jobs on top.</Description>
     <!-- Pinned so Hangfire's stored job records remain valid if the project file is renamed. -->
@@ -25,7 +25,7 @@
   <ItemGroup>
     <PackageReference Include="Core" Version="2.2.0" />
     <PackageReference Include="Core.Persistence" Version="2.0.0" />
-    <PackageReference Include="MeshTransit" Version="0.1.0" />
+    <PackageReference Include="MeshTransit" Version="0.2.0" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.24" />
     <PackageReference Include="Hangfire.Storage.SQLite" Version="0.4.3" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.12" />
